@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Lernspiel: Lückentext Einkaufen</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --seller-bg: #f1f8ff;
+            --buyer-bg: #ffffff;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --border-color: #dcdde1;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f6fa;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 750px;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+        }
+
+        .instruction {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+        }
+
+        .dialog-row {
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            border-radius: 10px;
+            line-height: 1.8;
+            border: 1px solid var(--border-color);
+        }
+
+        .role-buyer {
+            background-color: var(--buyer-bg);
+            border-left: 5px solid #95a5a6;
+        }
+
+        .role-seller {
+            background-color: var(--seller-bg);
+            border-left: 5px solid #3498db;
+        }
+
+        .role-label {
+            display: block;
+            font-weight: bold;
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            color: #7f8c8d;
+        }
+
+        /* Styling für die Drop-downs */
+        select {
+            padding: 5px 10px;
+            font-size: 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            background-color: white;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s ease;
+            margin: 0 5px;
+            font-family: inherit;
+        }
+
+        select:focus {
+            border-color: #3498db;
+        }
+
+        /* Feedback-Farben */
+        select.correct {
+            border-color: var(--success-color);
+            background-color: #f0fff4;
+            color: var(--success-color);
+        }
+
+        select.wrong {
+            border-color: var(--error-color);
+            background-color: #fff5f5;
+            color: var(--error-color);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: transform 0.1s;
+        }
+
+        button:active { transform: scale(0.98); }
+
+        #solution-btn { background-color: var(--primary-color); color: white; }
+        #reset-btn { background-color: #dcdde1; color: #333; }
+
+        @media (max-width: 500px) {
+            .container { padding: 15px; }
+            select { margin: 5px 0; width: 100%; }
+            .dialog-row { font-size: 0.95rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Dialog: Im Modegeschäft</h1>
+    <p class="instruction">Wähle die richtigen Wörter aus den Listen aus.</p>
+
+    <div id="dialog-container">
+        <!-- Der Dialog wird per JS eingefügt -->
+    </div>
+
+    <div class="controls">
+        <button id="solution-btn">Lösung anzeigen</button>
+        <button id="reset-btn">Neustart</button>
+    </div>
+</div>
+
+<script>
+    // Struktur: Text davor, Dropdown-Optionen (die erste ist immer richtig), Text danach
+    const dialogData = [
+        { role: "Покупатель", parts: ["Здравствуйте! Я ", ["ищу", "ем", "вижу"], " длинное платье синего цвета."] },
+        { role: "Продавец", parts: ["Здравствуйте! Какой у вас ", ["размер", "цвет", "чек"], "?"] },
+        { role: "Покупатель", parts: ["Обычно эмка, но иногда ", ["эска", "рубашка", "цена"], "."] },
+        { role: "Продавец", parts: ["У нас есть такое и такое ", ["платье", "брюки", "сапоги"], "."] },
+        { role: "Покупатель", parts: ["Я ", ["примерю", "куплю", "продаю"], " оба."] },
+        { role: "Продавец", parts: ["Отнесу их в ", ["примерочную", "кассу", "аптеку"], "."] },
+        { role: "Продавец", parts: ["Вам ", ["подошли", "ушли", "пришли"], " платья?"] },
+        { role: "Покупатель", parts: ["Первое мне ", ["велико", "красиво", "синее"], ". Можете принести его на размер ", ["меньше", "дороже", "шире"], "?"] },
+        { role: "Покупатель", parts: ["Я ", ["возьму", "дам", "ищу"], " это платье."] },
+        { role: "Продавец", parts: ["Будете ", ["платить", "говорить", "искать"], " картой или наличными?"] },
+        { role: "Покупатель", parts: ["Картой, пожалуйста."] },
+        { role: "Продавец", parts: ["Вот ваш ", ["чек", "размер", "цвет"], ", ваше платье. Спасибо за ", ["покупку", "скидку", "встречу"], "."] }
+    ];
+
+    const container = document.getElementById('dialog-container');
+
+    function renderDialog() {
+        container.innerHTML = '';
+        dialogData.forEach((line, lineIdx) => {
+            const row = document.createElement('div');
+            row.className = `dialog-row ${line.role === 'Продавец' ? 'role-seller' : 'role-buyer'}`;
+            
+            const label = document.createElement('span');
+            label.className = 'role-label';
+            label.textContent = line.role;
+            row.appendChild(label);
+
+            line.parts.forEach((part, partIdx) => {
+                if (Array.isArray(part)) {
+                    // Erstelle Select-Menü
+                    const select = document.createElement('select');
+                    const correctValue = part[0];
+                    
+                    // Optionen mischen
+                    const options = [...part].sort();
+                    
+                    const defaultOpt = document.createElement('option');
+                    defaultOpt.value = "";
+                    defaultOpt.textContent = "???";
+                    defaultOpt.disabled = true;
+                    defaultOpt.selected = true;
+                    select.appendChild(defaultOpt);
+
+                    options.forEach(optText => {
+                        const opt = document.createElement('option');
+                        opt.value = optText;
+                        opt.textContent = optText;
+                        select.appendChild(opt);
+                    });
+
+                    select.onchange = () => {
+                        if (select.value === correctValue) {
+                            select.className = 'correct';
+                        } else {
+                            select.className = 'wrong';
+                        }
+                    };
+                    
+                    select.dataset.correct = correctValue;
+                    row.appendChild(select);
+                } else {
+                    // Erstelle Textteil
+                    const span = document.createElement('span');
+                    span.textContent = part;
+                    row.appendChild(span);
+                }
+            });
+            container.appendChild(row);
+        });
+    }
+
+    document.getElementById('solution-btn').onclick = () => {
+        document.querySelectorAll('select').forEach(select => {
+            select.value = select.dataset.correct;
+            select.className = 'correct';
+        });
+    };
+
+    document.getElementById('reset-btn').onclick = () => {
+        renderDialog();
+    };
+
+    // Start
+    renderDialog();
+</script>
+
+</body>
+</html>
