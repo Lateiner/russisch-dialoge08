@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Lernspiel: Rollen-Sortierung</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --seller-color: #3498db;
+            --buyer-color: #9b59b6;
+            --success-bg: #e8f5e9;
+            --error-bg: #ffebee;
+            --success-text: #2e7d32;
+            --error-text: #c62828;
+            --text-main: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 15px;
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .instruction {
+            text-align: center;
+            font-size: 0.95rem;
+            color: #666;
+            margin-bottom: 25px;
+        }
+
+        /* Bereich für die unsortierten Sätze */
+        #item-pool {
+            background: #eee;
+            padding: 15px;
+            border-radius: 10px;
+            min-height: 100px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 30px;
+            border: 2px dashed #ccc;
+        }
+
+        .bubble {
+            padding: 10px 15px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 18px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            max-width: 100%;
+            transition: all 0.2s ease;
+            user-select: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .bubble:hover {
+            border-color: var(--seller-color);
+            transform: scale(1.02);
+        }
+
+        .bubble.selected {
+            border-color: #f1c40f;
+            background-color: #fff9c4;
+            box-shadow: 0 0 10px rgba(241, 196, 15, 0.5);
+        }
+
+        /* Spalten-Layout */
+        .columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .column {
+            background: #fdfdfd;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            transition: background 0.3s;
+        }
+
+        .column.highlight {
+            background: #e3f2fd;
+            border-color: var(--seller-color);
+        }
+
+        .column h2 {
+            text-align: center;
+            font-size: 1.1rem;
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .seller-h { color: var(--seller-color); }
+        .buyer-h { color: var(--buyer-color); }
+
+        /* Sätze innerhalb der Spalten */
+        .sorted-item {
+            margin: 5px 0;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            border: 1px solid transparent;
+        }
+
+        .correct {
+            background-color: var(--success-bg);
+            color: var(--success-text);
+            border-color: #c8e6c9;
+        }
+
+        .wrong {
+            background-color: var(--error-bg);
+            color: var(--error-text);
+            border-color: #ffcdd2;
+            text-decoration: line-through;
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        #solution-btn { background: var(--primary-color); color: white; }
+        #reset-btn { background: #e0e0e0; color: #333; }
+
+        /* Responsive Design */
+        @media (max-width: 650px) {
+            .columns {
+                grid-template-columns: 1fr;
+            }
+            .column {
+                min-height: 150px;
+            }
+            h1 { font-size: 1.3rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Wer sagt was?</h1>
+    <p class="instruction">
+        Klicke einen Satz an und klicke dann auf die richtige Spalte, um ihn zuzuordnen.
+    </p>
+
+    <div id="item-pool">
+        <!-- Sätze werden hier geladen -->
+    </div>
+
+    <div class="columns">
+        <div class="column" id="col-seller" onclick="assignTo('seller')">
+            <h2 class="seller-h">Продавец (Verkäufer)</h2>
+            <div class="list" id="list-seller"></div>
+        </div>
+        <div class="column" id="col-buyer" onclick="assignTo('buyer')">
+            <h2 class="buyer-h">Покупатель (Käufer)</h2>
+            <div class="list" id="list-buyer"></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="solution-btn">Lösung anzeigen</button>
+        <button id="reset-btn">Neustart</button>
+    </div>
+</div>
+
+<script>
+    const dialogItems = [
+        { text: "Здравствуйте! Я ищу длинное платье синего цвета.", role: "buyer" },
+        { text: "Здравствуйте! Какой у вас размер?", role: "seller" },
+        { text: "Обычно эмка, но иногда эска.", role: "buyer" },
+        { text: "У нас есть такое и такое платье.", role: "seller" },
+        { text: "Я примерю оба.", role: "buyer" },
+        { text: "Отнесу их в примерочную.", role: "seller" },
+        { text: "Вам подошли платья?", role: "seller" },
+        { text: "Первое мне велико. Можете принести его на размер меньше?", role: "buyer" },
+        { text: "Я возьму это платье.", role: "buyer" },
+        { text: "Будете платить картой или наличными?", role: "seller" },
+        { text: "Картой, пожалуйста.", role: "buyer" },
+        { text: "Вот ваш чек, ваше платье. Спасибо за покупку.", role: "seller" }
+    ];
+
+    let selectedItemIdx = null;
+    let poolIndices = [];
+
+    function init() {
+        selectedItemIdx = null;
+        poolIndices = dialogItems.map((_, i) => i);
+        shuffle(poolIndices);
+        
+        document.getElementById('list-seller').innerHTML = '';
+        document.getElementById('list-buyer').innerHTML = '';
+        renderPool();
+    }
+
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    function renderPool() {
+        const poolEl = document.getElementById('item-pool');
+        poolEl.innerHTML = '';
+        
+        poolIndices.forEach(idx => {
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            if (selectedItemIdx === idx) bubble.classList.add('selected');
+            bubble.textContent = dialogItems[idx].text;
+            
+            bubble.onclick = (e) => {
+                e.stopPropagation(); // Verhindert Klick-Event der Spalte
+                selectedItemIdx = idx;
+                renderPool();
+                highlightColumns(true);
+            };
+            poolEl.appendChild(bubble);
+        });
+    }
+
+    function highlightColumns(show) {
+        document.getElementById('col-seller').classList.toggle('highlight', show);
+        document.getElementById('col-buyer').classList.toggle('highlight', show);
+    }
+
+    function assignTo(role) {
+        if (selectedItemIdx === null) return;
+
+        const item = dialogItems[selectedItemIdx];
+        const isCorrect = (item.role === role);
+        
+        const div = document.createElement('div');
+        div.className = 'sorted-item ' + (isCorrect ? 'correct' : 'wrong');
+        div.textContent = item.text;
+
+        document.getElementById('list-' + role).appendChild(div);
+
+        // Aus Pool entfernen
+        poolIndices = poolIndices.filter(i => i !== selectedItemIdx);
+        selectedItemIdx = null;
+        
+        highlightColumns(false);
+        renderPool();
+    }
+
+    document.getElementById('solution-btn').onclick = () => {
+        init(); // Erst alles zurücksetzen
+        dialogItems.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'sorted-item correct';
+            div.textContent = item.text;
+            document.getElementById('list-' + item.role).appendChild(div);
+        });
+        poolIndices = [];
+        renderPool();
+    };
+
+    document.getElementById('reset-btn').onclick = init;
+
+    init();
+</script>
+
+</body>
+</html>
