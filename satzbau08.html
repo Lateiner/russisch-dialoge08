@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Baukasten: Einkaufen</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f4f7f9;
+            --tile-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+        }
+
+        .progress {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: bold;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.15rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+            line-height: 1.4;
+            min-height: 3.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fdfdfd;
+            border-radius: 8px;
+            padding: 5px;
+        }
+
+        .sentence-display {
+            min-height: 90px;
+            border: 2px dashed #cbd5e0;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-content: flex-start;
+            padding: 12px;
+            background-color: #fafafa;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            min-height: 110px;
+            padding: 10px;
+            background: #f1f4f6;
+            border-radius: 10px;
+        }
+
+        .tile {
+            padding: 8px 12px;
+            background: var(--tile-bg);
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            box-shadow: 0 2px 0 #cbd5e0;
+            transition: all 0.1s ease;
+            touch-action: manipulation;
+            white-space: nowrap;
+        }
+
+        .tile:active {
+            transform: translateY(2px);
+            box-shadow: 0 0 0 #ddd;
+        }
+
+        .tile.used {
+            opacity: 0.2;
+            background: #e2e8f0;
+            cursor: default;
+            pointer-events: none;
+            box-shadow: none;
+        }
+
+        .sentence-display.correct {
+            border: 2px solid var(--success);
+            background-color: #f0fff4;
+        }
+        
+        .sentence-display.correct .tile {
+            border-color: var(--success);
+            color: var(--success);
+            pointer-events: none;
+        }
+
+        .sentence-display.wrong {
+            border: 2px solid var(--error);
+            background-color: #fff5f5;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        button:active { transform: scale(0.96); }
+
+        #next-btn {
+            background: var(--success);
+            color: white;
+            display: none;
+            width: 100%;
+            font-size: 1rem;
+            margin-top: 10px;
+        }
+
+        #solution-btn { background: var(--primary); color: white; }
+        #clear-btn { background: #edf2f7; color: #4a5568; }
+        #restart-btn { background: #a0aec0; color: white; }
+
+        @media (max-width: 480px) {
+            .tile { font-size: 0.9rem; padding: 6px 10px; }
+            .container { padding: 12px; }
+            button { flex: 1; min-width: 100px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="progress" id="progress">Satz 1 von 8</div>
+    <h1 id="translation-hint">Übersetze...</h1>
+    
+    <div class="sentence-display" id="sentence-display"></div>
+
+    <div class="word-bank" id="word-bank"></div>
+
+    <div class="controls">
+        <button id="clear-btn">Löschen</button>
+        <button id="solution-btn">Lösung</button>
+        <button id="restart-btn">Neustart</button>
+        <button id="next-btn">Richtig! Weiter zum nächsten Satz</button>
+    </div>
+</div>
+
+<script>
+    const exercises = [
+        {
+            german: "Ich suche ein langes blaues Kleid.",
+            russian: ["Я", "ищу", "длинное", "платье", "синего", "цвета."],
+        },
+        {
+            german: "Welche Größe haben Sie?",
+            russian: ["Какой", "у", "вас", "размер?"],
+        },
+        {
+            german: "Normalerweise M, aber manchmal S.",
+            russian: ["Обычно", "эмка,", "но", "иногда", "эска."],
+        },
+        {
+            german: "Ich werde beide anprobieren.",
+            russian: ["Я", "примерю", "оба", "платья."],
+        },
+        {
+            german: "Ich bringe sie in die Umkleidekabine.",
+            russian: ["Отнесу", "их", "в", "примерочную."],
+        },
+        {
+            german: "Das erste ist mir zu groß.",
+            russian: ["Первое", "платье", "мне", "велико."],
+        },
+        {
+            german: "Ich nehme dieses Kleid.",
+            russian: ["Я", "возьму", "это", "платье."],
+        },
+        {
+            german: "Zahlen Sie mit Karte oder bar?",
+            russian: ["Будете", "платить", "картой", "или", "наличными?"],
+        }
+    ];
+
+    let currentIdx = 0;
+    let userWords = [];
+    let usedIndices = []; 
+    let poolWords = [];
+
+    const displayEl = document.getElementById('sentence-display');
+    const bankEl = document.getElementById('word-bank');
+    const hintEl = document.getElementById('translation-hint');
+    const progressEl = document.getElementById('progress');
+    const nextBtn = document.getElementById('next-btn');
+    const solutionBtn = document.getElementById('solution-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const restartBtn = document.getElementById('restart-btn');
+
+    function initExercise() {
+        const ex = exercises[currentIdx];
+        hintEl.textContent = `„${ex.german}“`;
+        progressEl.textContent = `Satz ${currentIdx + 1} von ${exercises.length}`;
+        
+        userWords = [];
+        usedIndices = [];
+        poolWords = [...ex.russian].sort(() => Math.random() - 0.5);
+        
+        nextBtn.style.display = 'none';
+        solutionBtn.style.display = 'block';
+        clearBtn.style.display = 'block';
+        restartBtn.style.display = 'block';
+        
+        displayEl.classList.remove('correct', 'wrong');
+        render();
+    }
+
+    function render() {
+        displayEl.innerHTML = '';
+        userWords.forEach((word, index) => {
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+            tile.textContent = word;
+            tile.onclick = () => {
+                if (!displayEl.classList.contains('correct')) removeWord(index);
+            };
+            displayEl.appendChild(tile);
+        });
+
+        bankEl.innerHTML = '';
+        poolWords.forEach((word, index) => {
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+            tile.textContent = word;
+            
+            if (usedIndices.includes(index)) {
+                tile.classList.add('used');
+            } else {
+                tile.onclick = () => addWord(word, index);
+            }
+            bankEl.appendChild(tile);
+        });
+    }
+
+    function addWord(word, poolIdx) {
+        userWords.push(word);
+        usedIndices.push(poolIdx);
+        render();
+        
+        if (userWords.length === exercises[currentIdx].russian.length) {
+            checkResult();
+        }
+    }
+
+    function removeWord(indexInUserWords) {
+        userWords.splice(indexInUserWords, 1);
+        usedIndices.splice(indexInUserWords, 1);
+        displayEl.classList.remove('wrong');
+        render();
+    }
+
+    function checkResult() {
+        const target = exercises[currentIdx].russian.join(' ');
+        const current = userWords.join(' ');
+
+        if (target === current) {
+            displayEl.classList.add('correct');
+            showNextState();
+        } else {
+            displayEl.classList.add('wrong');
+        }
+    }
+
+    function showNextState() {
+        nextBtn.style.display = 'block';
+        solutionBtn.style.display = 'none';
+        clearBtn.style.display = 'none';
+        bankEl.innerHTML = ""; 
+    }
+
+    solutionBtn.onclick = () => {
+        userWords = [...exercises[currentIdx].russian];
+        displayEl.classList.remove('wrong');
+        displayEl.classList.add('correct');
+        showNextState();
+        render();
+    };
+
+    clearBtn.onclick = () => {
+        userWords = [];
+        usedIndices = [];
+        displayEl.classList.remove('correct', 'wrong');
+        render();
+    };
+
+    restartBtn.onclick = () => {
+        if(confirm("Möchtest du wirklich ganz von vorne beginnen?")) {
+            currentIdx = 0;
+            initExercise();
+        }
+    };
+
+    nextBtn.onclick = () => {
+        currentIdx++;
+        if (currentIdx < exercises.length) {
+            initExercise();
+        } else {
+            finishGame();
+        }
+    };
+
+    function finishGame() {
+        hintEl.textContent = "Hervorragend! Du hast alle 8 Sätze gemeistert.";
+        displayEl.innerHTML = "🎉 Übung erfolgreich beendet!";
+        displayEl.classList.add('correct');
+        bankEl.innerHTML = "";
+        nextBtn.style.display = 'none';
+        progressEl.textContent = "Abgeschlossen";
+        solutionBtn.style.display = 'none';
+        clearBtn.style.display = 'none';
+    }
+
+    initExercise();
+</script>
+
+</body>
+</html>
