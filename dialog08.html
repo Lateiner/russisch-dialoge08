@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Lernspiel: Dialog-Puzzle</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --buyer-bg: #ffffff;
+            --seller-bg: #f1f8ff;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --text-color: #333;
+            --selected-color: #fff9c4;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.4rem;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        p.instruction {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        #puzzle-board {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .sentence-card {
+            padding: 12px 15px;
+            background-color: var(--buyer-bg);
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            touch-action: manipulation;
+            position: relative;
+        }
+
+        /* Verkäufer-Stil */
+        .sentence-card[data-role="seller"] {
+            background-color: var(--seller-bg);
+            border-left: 4px solid var(--accent-color);
+        }
+
+        /* Auswahl-Stil */
+        .sentence-card.selected {
+            background-color: var(--selected-color);
+            border-color: var(--accent-color);
+            z-index: 2;
+        }
+
+        /* Sofort-Feedback: Korrektes Element */
+        .sentence-card.correct {
+            border-color: var(--success-color);
+            background-color: #f0fff4;
+        }
+        
+        .sentence-card.correct::after {
+            content: "✓";
+            position: absolute;
+            right: 10px;
+            color: var(--success-color);
+            font-weight: bold;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 25px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 0.95rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+
+        button:active { opacity: 0.7; }
+
+        #solution-btn {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        #reset-btn {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+
+        #feedback-msg {
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+            color: var(--success-color);
+            height: 20px;
+        }
+
+        @media (max-width: 480px) {
+            h1 { font-size: 1.2rem; }
+            .sentence-card { font-size: 0.95rem; padding: 10px; }
+            button { flex: 1; padding: 12px 5px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Dialog sortieren: Im Geschäft</h1>
+    <p class="instruction">
+        Bringe den Dialog in die richtige Reihenfolge.<br>
+        <strong>Klicke zwei Sätze an, um sie zu tauschen.</strong><br>
+        Grüne Sätze sind bereits an der richtigen Stelle.
+    </p>
+
+    <div id="puzzle-board"></div>
+
+    <div id="feedback-msg"></div>
+
+    <div class="controls">
+        <button id="solution-btn">Lösung anzeigen</button>
+        <button id="reset-btn">Neustart</button>
+    </div>
+</div>
+
+<script>
+    const dialogData = [
+        { text: "Здравствуйте! Я ищу длинное платье синего цвета.", role: "buyer" },
+        { text: "Здравствуйте! Какой у вас размер?", role: "seller" },
+        { text: "Обычно эмка, но иногда эска.", role: "buyer" },
+        { text: "У нас есть такое и такое платье.", role: "seller" },
+        { text: "Я примерю оба.", role: "buyer" },
+        { text: "Отнесу их в примерочную.", role: "seller" },
+        { text: "Вам подошли платья?", role: "seller" },
+        { text: "Первое мне велико. Можете принести его на размер меньше?", role: "buyer" },
+        { text: "Я возьму это платье.", role: "buyer" },
+        { text: "Будете платить картой oder наличными?", role: "seller" },
+        { text: "Картой, пожалуйста.", role: "buyer" },
+        { text: "Вот ваш чек, ваше платье. Спасибо за покупку.", role: "seller" }
+    ];
+
+    let currentOrder = [];
+    let firstSelectedIndex = null;
+    const board = document.getElementById('puzzle-board');
+    const feedbackMsg = document.getElementById('feedback-msg');
+
+    function init() {
+        feedbackMsg.textContent = "";
+        firstSelectedIndex = null;
+        // Indizes erstellen und mischen
+        currentOrder = dialogData.map((_, index) => index);
+        do {
+            shuffle(currentOrder);
+        } while (isAlreadySolved()); // Sicherstellen, dass es nicht zufällig gelöst startet
+        
+        render();
+    }
+
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    function isAlreadySolved() {
+        return currentOrder.every((val, index) => val === index);
+    }
+
+    function render() {
+        board.innerHTML = '';
+        let correctCount = 0;
+
+        currentOrder.forEach((originalIdx, currentPos) => {
+            const isCorrect = (originalIdx === currentPos);
+            if (isCorrect) correctCount++;
+
+            const card = document.createElement('div');
+            card.className = 'sentence-card';
+            if (isCorrect) card.classList.add('correct');
+            if (firstSelectedIndex === currentPos) card.classList.add('selected');
+
+            card.textContent = dialogData[originalIdx].text;
+            card.dataset.role = dialogData[originalIdx].role;
+            
+            card.onclick = () => handleSwap(currentPos);
+            board.appendChild(card);
+        });
+
+        if (correctCount === dialogData.length) {
+            feedbackMsg.textContent = "Hervorragend! Alles ist korrekt.";
+        } else {
+            feedbackMsg.textContent = "";
+        }
+    }
+
+    function handleSwap(clickedPos) {
+        if (firstSelectedIndex === null) {
+            // Erster Klick
+            firstSelectedIndex = clickedPos;
+            render();
+        } else {
+            // Zweiter Klick -> Tauschen
+            if (firstSelectedIndex !== clickedPos) {
+                const temp = currentOrder[firstSelectedIndex];
+                currentOrder[firstSelectedIndex] = currentOrder[clickedPos];
+                currentOrder[clickedPos] = temp;
+            }
+            firstSelectedIndex = null;
+            render(); // Feedback erfolgt automatisch beim Rendern durch .correct Klasse
+        }
+    }
+
+    // Lösung anzeigen
+    document.getElementById('solution-btn').onclick = () => {
+        currentOrder = dialogData.map((_, index) => index);
+        firstSelectedIndex = null;
+        render();
+    };
+
+    // Neustart
+    document.getElementById('reset-btn').onclick = init;
+
+    // Start
+    init();
+</script>
+
+</body>
+</html>
