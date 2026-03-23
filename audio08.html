@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Hör-Quiz: Im Laden</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f0f4f8;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .progress {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        h2 {
+            color: var(--primary);
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+        }
+
+        /* Lautsprecher Button */
+        .audio-btn {
+            background: var(--accent);
+            border: none;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            cursor: pointer;
+            margin: 10px auto 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .audio-btn:hover { transform: scale(1.05); background: #2980b9; }
+        .audio-btn:active { transform: scale(0.95); }
+        .audio-btn svg { fill: white; width: 45px; height: 45px; }
+
+        /* Antwort-Optionen */
+        .options {
+            display: grid;
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .option {
+            background: #fff;
+            border: 2px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1.05rem;
+            text-align: left;
+            transition: all 0.2s;
+            color: var(--primary);
+            line-height: 1.4;
+        }
+
+        .option:hover { border-color: var(--accent); background: #f1f9ff; }
+
+        .option.correct {
+            background-color: #f0fff4;
+            border-color: var(--success);
+            color: #22543d;
+            font-weight: 600;
+        }
+
+        .option.wrong {
+            background-color: #fff5f5;
+            border-color: var(--error);
+            color: #822727;
+        }
+
+        /* Footer Buttons */
+        .footer {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        button.control-btn {
+            padding: 12px 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: opacity 0.2s;
+        }
+
+        #next-btn { background: var(--success); color: white; display: none; flex: 2; }
+        #solution-btn { background: #edf2f7; color: #4a5568; flex: 1; }
+        #restart-btn { background: #cbd5e0; color: #2d3748; flex: 1; }
+
+        @media (max-width: 480px) {
+            .container { padding: 20px; }
+            .option { font-size: 0.95rem; padding: 12px; }
+            .audio-btn { width: 75px; height: 75px; }
+            .audio-btn svg { width: 35px; height: 35px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="quiz-container">
+    <div class="progress" id="progress">Satz 1 von 8</div>
+    <h2>Höre gut zu:</h2>
+    
+    <button class="audio-btn" id="play-btn">
+        <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+    </button>
+
+    <div class="options" id="options-box"></div>
+
+    <div class="footer">
+        <button id="solution-btn" class="control-btn">Lösung</button>
+        <button id="restart-btn" class="control-btn">Neustart</button>
+        <button id="next-btn" class="control-btn">Richtig! Weiter</button>
+    </div>
+</div>
+
+<script>
+    const dialogData = [
+        {
+            correct: "Здравствуйте! Я ищу длинное платье синего цвета.",
+            distractors: ["Я ищу красную юбку.", "У вас есть синие сапоги?"]
+        },
+        {
+            correct: "Какой у вас размер?",
+            distractors: ["Какого цвета платье?", "Сколько это стоит?"]
+        },
+        {
+            correct: "Обычно эмка, но иногда эска.",
+            distractors: ["У меня сорок второй размер.", "Обычно элька, а сейчас эска."]
+        },
+        {
+            correct: "Я примерю оба платья.",
+            distractors: ["Я возьму эти платья.", "Где здесь примерочная?"]
+        },
+        {
+            correct: "Отнесу их в примерочную.",
+            distractors: ["Положите это в пакет.", "Я ищу другой размер."]
+        },
+        {
+            correct: "Первое мне велико.",
+            distractors: ["Второе мне мало.", "Платье мне подошло."]
+        },
+        {
+            correct: "Я возьму это платье.",
+            distractors: ["Я куплю эти сапоги.", "Мне нужно другое платье."]
+        },
+        {
+            correct: "Будете платить картой или наличными?",
+            distractors: ["Вы принимаете наличные?", "Вот ваш чек и платье."]
+        }
+    ];
+
+    let currentIdx = 0;
+    let synth = window.speechSynthesis;
+    let russianVoice = null;
+
+    // Suche russische männliche Stimme
+    function loadVoice() {
+        const voices = synth.getVoices();
+        russianVoice = voices.find(v => v.lang.startsWith('ru') && 
+            (v.name.includes('Pavel') || v.name.includes('Dmitry') || v.name.includes('Maxim'))) 
+            || voices.find(v => v.lang.startsWith('ru'));
+    }
+
+    if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoice;
+
+    function speak(text) {
+        if (synth.speaking) synth.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.voice = russianVoice;
+        utter.lang = 'ru-RU';
+        utter.pitch = 0.9; // Tiefer für männlichen Klang
+        utter.rate = 0.85; // Etwas langsamer für Lernende
+        synth.speak(utter);
+    }
+
+    function initStep() {
+        const data = dialogData[currentIdx];
+        document.getElementById('progress').textContent = `Satz ${currentIdx + 1} von ${dialogData.length}`;
+        document.getElementById('next-btn').style.display = 'none';
+        
+        const box = document.getElementById('options-box');
+        box.innerHTML = '';
+
+        const choices = [data.correct, ...data.distractors].sort(() => Math.random() - 0.5);
+
+        choices.forEach(text => {
+            const div = document.createElement('div');
+            div.className = 'option';
+            div.textContent = text;
+            div.onclick = () => {
+                const all = document.querySelectorAll('.option');
+                if (text === data.correct) {
+                    div.classList.add('correct');
+                    all.forEach(el => el.style.pointerEvents = 'none');
+                    document.getElementById('next-btn').style.display = 'block';
+                } else {
+                    div.classList.add('wrong');
+                    div.style.pointerEvents = 'none';
+                }
+            };
+            box.appendChild(div);
+        });
+        
+        // Automatisch abspielen beim Start jeder Frage (optional)
+        // setTimeout(() => speak(data.correct), 500);
+    }
+
+    document.getElementById('play-btn').onclick = () => speak(dialogData[currentIdx].correct);
+
+    document.getElementById('solution-btn').onclick = () => {
+        const correctText = dialogData[currentIdx].correct;
+        document.querySelectorAll('.option').forEach(opt => {
+            if (opt.textContent === correctText) opt.classList.add('correct');
+            opt.style.pointerEvents = 'none';
+        });
+        document.getElementById('next-btn').style.display = 'block';
+    };
+
+    document.getElementById('next-btn').onclick = () => {
+        currentIdx++;
+        if (currentIdx < dialogData.length) {
+            initStep();
+        } else {
+            finish();
+        }
+    };
+
+    document.getElementById('restart-btn').onclick = () => {
+        currentIdx = 0;
+        initStep();
+    };
+
+    function finish() {
+        document.getElementById('quiz-container').innerHTML = `
+            <div style="padding:40px 10px;">
+                <h1 style="font-size:3rem; margin-bottom:10px;">🎉</h1>
+                <h2>Hervorragend!</h2>
+                <p>Du hast alle 8 Sätze im Hörverstehen gemeistert.</p>
+                <button onclick="location.reload()" class="control-btn" style="background:var(--accent); color:white; margin-top:20px; padding:15px 30px; width:auto;">Nochmal von vorne</button>
+            </div>
+        `;
+    }
+
+    // Start
+    setTimeout(() => {
+        loadVoice();
+        initStep();
+    }, 200);
+</script>
+
+</body>
+</html>
