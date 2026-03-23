@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Dialog: Deine Entscheidung (Schuhe)</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --seller-bg: #f1f3f5;
+            --buyer-bg: #e3f2fd;
+            --accent: #3498db;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --text-dark: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 550px;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 25px rgba(0,0,0,0.1);
+        }
+
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        /* Chat-Fenster */
+        #chat-window {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background-color: #ffffff;
+            scroll-behavior: smooth;
+        }
+
+        .bubble {
+            max-width: 85%;
+            padding: 12px 15px;
+            border-radius: 15px;
+            font-size: 1rem;
+            line-height: 1.4;
+            position: relative;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .seller {
+            align-self: flex-start;
+            background: var(--seller-bg);
+            color: var(--text-dark);
+            border-bottom-left-radius: 2px;
+        }
+
+        .buyer {
+            align-self: flex-end;
+            background: var(--buyer-bg);
+            color: #0d47a1;
+            border-bottom-right-radius: 2px;
+        }
+
+        .translation {
+            display: block;
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        /* Auswahl-Bereich */
+        #action-area {
+            padding: 15px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .choice-btn {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--accent);
+            background: white;
+            color: var(--accent);
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: bold;
+            transition: all 0.2s;
+            text-align: left;
+        }
+
+        .choice-btn:hover { background: #f0f8ff; border-color: #2980b9; }
+
+        /* Falsche Antwort Animation */
+        .wrong-choice {
+            background-color: #fff5f5 !important;
+            border-color: var(--error) !important;
+            color: var(--error) !important;
+            animation: shake 0.4s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        #restart-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: none;
+            font-weight: bold;
+        }
+
+        @media (max-width: 480px) {
+            .bubble { font-size: 0.9rem; padding: 10px; }
+            .choice-btn { font-size: 0.85rem; padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>Магазин обуви (Der Schuhladen)</header>
+    
+    <div id="chat-window"></div>
+
+    <div id="action-area">
+        <div id="choices-container"></div>
+        <button id="restart-btn" onclick="startStory()">🔄 Neustart</button>
+    </div>
+</div>
+
+<script>
+    // Logik-Struktur: correct (true = geht weiter, false = rotes Wackeln)
+    // 'next' bestimmt, welcher Schritt danach geladen wird.
+    const storyData = {
+        start: {
+            seller: "Здравствуйте! Что вы ищете?",
+            sellerDe: "Guten Tag! Was suchen Sie?",
+            options: [
+                { text: "Здравствуйте! Я ищу коричневые сапоги.", de: "Guten Tag! Ich suche braune Stiefel.", correct: true, next: "size" },
+                { text: "Здравствуйте! Я ищу хлеб и молоко.", de: "Guten Tag! Ich suche Brot und Milch.", correct: false }
+            ]
+        },
+        size: {
+            seller: "Какой у вас размер?",
+            sellerDe: "Welche Größe haben Sie?",
+            options: [
+                { text: "Меня зовут Анна.", de: "Ich heiße Anna.", correct: false },
+                { text: "У меня тридцать восьмой размер.", de: "Ich habe Größe 38.", correct: true, next: "try_on" }
+            ]
+        },
+        try_on: {
+            seller: "Посмотрите эти. Вам они нравятся? Примерьте их... Эти сапоги вам подошли?",
+            sellerDe: "Schauen Sie sich diese an. Gefallen sie Ihnen? Probieren Sie sie an... Haben die Stiefel gepasst?",
+            // Hier sind BEIDE Optionen logisch möglich (Verzweigung der Story)
+            options: [
+                { text: "Эти мне немного мало. Можете принести на размер больше?", de: "Diese sind mir etwas zu klein. Können Sie eine Nummer größer bringen?", correct: true, next: "bigger_size" },
+                { text: "Да, они подходят. Я возьму эти сапоги.", de: "Ja, sie passen. Ich nehme diese Stiefel.", correct: true, next: "payment" }
+            ]
+        },
+        bigger_size: {
+            seller: "Да, конечно. Вот тридцать девятый размер. Теперь подходят?",
+            sellerDe: "Ja, natürlich. Hier ist Größe 39. Passen sie jetzt?",
+            options: [
+                { text: "Да, эти подходят. Я возьму их.", de: "Ja, diese passen. Ich nehme sie.", correct: true, next: "payment" },
+                { text: "Я не хочу платить.", de: "Ich möchte nicht bezahlen.", correct: false }
+            ]
+        },
+        payment: {
+            seller: "Хорошо. Будете платить картой или наличными?",
+            sellerDe: "Gut. Bezahlen Sie mit Karte oder bar?",
+            // Auch hier sind beide Zahlungsarten okay
+            options: [
+                { text: "Картой, пожалуйста.", de: "Mit Karte, bitte.", correct: true, next: "end" },
+                { text: "Наличными, пожалуйста.", de: "Bar, bitte.", correct: true, next: "end" }
+            ]
+        },
+        end: {
+            seller: "Вот ваш чек. Спасибо за покупку! До свидания.",
+            sellerDe: "Hier ist Ihr Kassenbon. Vielen Dank für den Einkauf! Auf Wiedersehen.",
+            options: [] // Ende
+        }
+    };
+
+    const chatWindow = document.getElementById('chat-window');
+    const choicesContainer = document.getElementById('choices-container');
+    const restartBtn = document.getElementById('restart-btn');
+
+    function startStory() {
+        chatWindow.innerHTML = '';
+        restartBtn.style.display = 'none';
+        renderStep('start');
+    }
+
+    function renderStep(stepId) {
+        const step = storyData[stepId];
+        
+        // Nachricht des Verkäufers mit kurzer Verzögerung anzeigen
+        setTimeout(() => {
+            addBubble(step.seller, step.sellerDe, 'seller');
+            
+            // Optionen zufällig anordnen, damit die richtige Antwort nicht immer oben steht
+            const shuffledOptions = [...step.options].sort(() => Math.random() - 0.5);
+
+            choicesContainer.innerHTML = '';
+            if (shuffledOptions.length > 0) {
+                shuffledOptions.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'choice-btn';
+                    btn.innerHTML = `${opt.text} <span class="translation">(${opt.de})</span>`;
+                    
+                    btn.onclick = () => {
+                        if (opt.correct) {
+                            addBubble(opt.text, opt.de, 'buyer');
+                            choicesContainer.innerHTML = ''; // Buttons kurz leeren
+                            setTimeout(() => renderStep(opt.next), 800);
+                        } else {
+                            // Falsche Antwort gewählt
+                            btn.classList.add('wrong-choice');
+                            setTimeout(() => btn.classList.remove('wrong-choice'), 500);
+                        }
+                    };
+                    choicesContainer.appendChild(btn);
+                });
+            } else {
+                restartBtn.style.display = 'block';
+            }
+        }, 600);
+    }
+
+    function addBubble(text, de, side) {
+        const div = document.createElement('div');
+        div.className = `bubble ${side}`;
+        div.innerHTML = `${text} <span class="translation">${de}</span>`;
+        chatWindow.appendChild(div);
+        
+        // Scrollen zum neuesten Element
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    // Erster Start
+    startStory();
+</script>
+
+</body>
+</html>
