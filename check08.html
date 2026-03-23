@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Transfer: Schuhkarton-Etikett</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f4f7f6;
+            --label-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        /* Das Etikett-Design - Authentisch Russisch */
+        .shoebox-label {
+            background-color: var(--label-bg);
+            border: 2px solid #222;
+            border-radius: 4px;
+            padding: 25px;
+            margin-bottom: 30px;
+            text-align: left;
+            position: relative;
+            box-shadow: 4px 4px 0px #ccc;
+            font-family: 'Courier New', Courier, monospace;
+            color: #111;
+        }
+
+        .label-header {
+            border-bottom: 2px solid #222;
+            padding-bottom: 12px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .label-row { 
+            margin-bottom: 10px; 
+            font-size: 1.1rem; 
+            letter-spacing: 0.5px;
+        }
+        
+        .label-row b { 
+            color: #666; 
+            font-size: 0.75rem; 
+            text-transform: uppercase; 
+            display: block; 
+            margin-bottom: 2px;
+        }
+
+        .price-tag {
+            font-size: 1.6rem;
+            font-weight: bold;
+            margin-top: 18px;
+            border-top: 2px dashed #222;
+            padding-top: 12px;
+            display: block;
+        }
+
+        .barcode {
+            height: 35px;
+            background: repeating-linear-gradient(90deg, #000, #000 2px, #fff 2px, #fff 5px);
+            margin-top: 15px;
+            width: 100%;
+            opacity: 0.8;
+        }
+
+        /* Quiz-Bereich */
+        .quiz-area {
+            background: #fdfdfd;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 12px;
+        }
+
+        .question {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 18px;
+            color: var(--primary);
+            line-height: 1.4;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .option-btn {
+            background: white;
+            border: 2px solid #e2e8f0;
+            padding: 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .option-btn:hover { border-color: var(--accent); background: #f8fbff; }
+        .option-btn.correct { background-color: var(--success); color: white; border-color: var(--success); }
+        .option-btn.wrong { background-color: var(--error); color: white; border-color: var(--error); }
+
+        #feedback {
+            margin-top: 15px;
+            font-weight: bold;
+            min-height: 24px;
+            text-align: center;
+        }
+
+        button.next-btn {
+            margin: 15px auto 0;
+            padding: 12px 25px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: none;
+            font-weight: bold;
+        }
+
+        @media (max-width: 480px) {
+            .shoebox-label { padding: 15px; }
+            .label-row { font-size: 1rem; }
+            .price-tag { font-size: 1.3rem; }
+            .question { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 style="text-align:center; color: var(--primary); margin-top: 0;">Этикетка (Etikett-Check)</h2>
+    <p style="text-align:center; font-size: 0.9rem; color: #666; margin-bottom: 25px;">
+        Lies die russischen Informationen auf dem Karton und beantworte die Fragen.
+    </p>
+
+    <!-- Virtuelles Etikett Rein Russisch -->
+    <div class="shoebox-label">
+        <div class="label-header">
+            <span style="font-weight: bold; letter-spacing: 2px;">ОБУВЬ-МАРКЕТ</span>
+            <span style="font-size: 0.65rem;">АРТ. 5504-RU</span>
+        </div>
+        
+        <div class="label-row">
+            <b>МОДЕЛЬ:</b>
+            САПОГИ ЖЕНСКИЕ
+        </div>
+        
+        <div class="label-row">
+            <b>ЦВЕТ:</b>
+            КОРИЧНЕВЫЙ
+        </div>
+        
+        <div class="label-row">
+            <b>РАЗМЕР:</b>
+            38
+        </div>
+
+        <div class="price-tag">
+            ЦЕНА: 5000 РУБ.
+        </div>
+        
+        <div class="barcode"></div>
+    </div>
+
+    <!-- Quiz Bereich -->
+    <div class="quiz-area">
+        <div id="progress" style="font-size: 0.75rem; color: #999; margin-bottom: 8px; text-transform: uppercase;">Frage 1 von 5</div>
+        <div class="question" id="question-text">Lädt...</div>
+        <div class="options-grid" id="options"></div>
+        <div id="feedback"></div>
+        <center><button id="next-btn" class="next-btn" onclick="nextQuestion()">Nächste Frage</button></center>
+    </div>
+</div>
+
+<script>
+    const quizData = [
+        {
+            q: "Was für ein Produkt ist im Karton?",
+            options: ["Кроссовки (Sneaker)", "Сапоги (Stiefel)", "Туфли (Schuhe)"],
+            correct: 1
+        },
+        {
+            q: "Welche Farbe (Цвет) ist angegeben?",
+            options: ["Синий (Blau)", "Чёрный (Schwarz)", "Коричневый (Braun)"],
+            correct: 2
+        },
+        {
+            q: "Entspricht die Größe (Размер) der Angabe der Käuferin im Dialog?",
+            options: ["Ja, es ist Größe 38", "Nein, es ist Größe 36", "Nein, es ist Größe 42"],
+            correct: 0
+        },
+        {
+            q: "Wie hoch ist der Preis (Цена)?",
+            options: ["3000 Rubel", "5000 Rubel", "6500 Rubel"],
+            correct: 1
+        },
+        {
+            q: "Was müsste die Käuferin verlangen, wenn ihr dieser Schuh zu klein (мало) wäre?",
+            options: ["Größe 37", "Größe 38", "Größe 39 (на размер больше)"],
+            correct: 2
+        }
+    ];
+
+    let currentIdx = 0;
+
+    function initQuiz() {
+        const q = quizData[currentIdx];
+        document.getElementById('progress').textContent = `Frage ${currentIdx + 1} von ${quizData.length}`;
+        document.getElementById('question-text').textContent = q.q;
+        document.getElementById('feedback').textContent = "";
+        document.getElementById('next-btn').style.display = "none";
+
+        const optionsDiv = document.getElementById('options');
+        optionsDiv.innerHTML = '';
+
+        q.options.forEach((opt, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = opt;
+            btn.onclick = () => checkAnswer(btn, idx);
+            optionsDiv.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(btn, selectedIdx) {
+        const correctIdx = quizData[currentIdx].correct;
+        const feedback = document.getElementById('feedback');
+        const allBtns = document.querySelectorAll('.option-btn');
+
+        if (selectedIdx === correctIdx) {
+            btn.classList.add('correct');
+            feedback.style.color = "var(--success)";
+            feedback.textContent = "Richtig! ✅";
+            allBtns.forEach(b => b.style.pointerEvents = 'none');
+            document.getElementById('next-btn').style.display = "block";
+        } else {
+            btn.classList.add('wrong');
+            feedback.style.color = "var(--error)";
+            feedback.textContent = "Schau nochmal auf das Etikett!";
+            setTimeout(() => btn.classList.remove('wrong'), 800);
+        }
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < quizData.length) {
+            initQuiz();
+        } else {
+            showEnd();
+        }
+    }
+
+    function showEnd() {
+        document.querySelector('.quiz-area').innerHTML = `
+            <div style="text-align:center; padding: 10px;">
+                <h3 style="color:var(--success); margin-bottom: 10px;">Отлично! 🏆</h3>
+                <p>Du hast alle Informationen auf dem russischen Etikett korrekt verstanden.</p>
+                <button class="next-btn" style="display:inline-block;" onclick="location.reload()">Neustart</button>
+            </div>
+        `;
+    }
+
+    initQuiz();
+</script>
+
+</body>
+</html>
