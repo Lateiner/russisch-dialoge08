@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Hör-Sequenz: Kleidung</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 750px;
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .status-panel {
+            background: #ffffff;
+            border: 2px solid #edf2f7;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            min-height: 90px;
+        }
+
+        #progress { font-size: 0.8rem; color: #888; text-transform: uppercase; margin-bottom: 5px; }
+        #feedback { font-size: 1.3rem; font-weight: bold; color: var(--primary); }
+
+        .image-wrapper {
+            position: relative;
+            width: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+            background: #000;
+        }
+
+        .shop-img {
+            width: 100%;
+            height: auto;
+            display: block;
+            opacity: 0.9;
+        }
+
+        /* Hotspots */
+        .hotspot {
+            position: absolute;
+            width: 8%;
+            aspect-ratio: 1/1;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            display: none; /* Erst beim Start zeigen */
+        }
+
+        .playing .hotspot {
+            display: block;
+        }
+
+        /* Animation für den aktuell gesuchten Punkt (optionaler Hinweis) */
+        .hotspot:hover {
+            background: rgba(52, 152, 219, 0.5);
+            border-color: white;
+        }
+
+        .controls {
+            margin-top: 20px;
+            width: 100%;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        #start-btn { background: var(--success); color: white; }
+        #repeat-btn { background: var(--accent); color: white; display: none; }
+        #restart-btn { background: var(--primary); color: white; display: none; }
+
+        .correct-flash { background: var(--success) !important; border-color: white !important; transform: translate(-50%, -50%) scale(1.2); z-index: 10; }
+        .wrong-flash { background: var(--error) !important; border-color: white !important; }
+
+        @media (max-width: 500px) {
+            .hotspot { width: 12%; }
+            #feedback { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="game-container">
+    <div class="status-panel">
+        <div id="progress">Bereit?</div>
+        <div id="feedback">Klicke auf Start</div>
+    </div>
+
+    <div class="image-wrapper" id="img-wrapper">
+        <img src="shop.jpg" alt="Laden" class="shop-img">
+        
+        <!-- Die Sequenz der Hotspots -->
+        <div class="hotspot" style="top: 10%; left: 50%;" data-ru="Одежда"></div>
+        <div class="hotspot" style="top: 35%; left: 15%;" data-ru="Платья"></div>
+        <div class="hotspot" style="top: 26%; left: 44%;" data-ru="Сапоги"></div>
+        <div class="hotspot" style="top: 50%; left: 44%;" data-ru="Сапоги"></div>
+        <div class="hotspot" style="top: 40%; left: 35%;" data-ru="Свитер"></div>
+        <div class="hotspot" style="top: 30%; left: 74%;" data-ru="Рубашка"></div>
+        <div class="hotspot" style="top: 75%; left: 18%;" data-ru="Юбка"></div>
+        <div class="hotspot" style="top: 65%; left: 68%;" data-ru="Джинсы"></div>
+        <div class="hotspot" style="top: 70%; left: 48%;" data-ru="Кроссовки"></div>
+        <div class="hotspot" style="top: 75%; left: 90%;" data-ru="Куртка"></div>
+    </div>
+
+    <div class="controls">
+        <button id="start-btn">Spiel starten</button>
+        <button id="repeat-btn">🔊 Begriff wiederholen</button>
+        <button id="restart-btn">🔄 Neustart</button>
+    </div>
+</div>
+
+<script>
+    // Die feste Reihenfolge der Abfrage
+    const sequence = [
+        "Одежда",
+        "Платья",
+        "Сапоги",
+        "Свитер",
+        "Рубашка",
+        "Юбка",
+        "Джинсы",
+        "Кроссовки",
+        "Куртка"
+    ];
+
+    let currentIndex = 0;
+    let isPlaying = false;
+    let russianVoice = null;
+    const synth = window.speechSynthesis;
+
+    const hotspots = document.querySelectorAll('.hotspot');
+    const startBtn = document.getElementById('start-btn');
+    const repeatBtn = document.getElementById('repeat-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const feedback = document.getElementById('feedback');
+    const progress = document.getElementById('progress');
+    const wrapper = document.getElementById('img-wrapper');
+
+    function loadVoice() {
+        const voices = synth.getVoices();
+        // Suche nach russischer Stimme (Pavel, Dmitry, Maxim oder einfach ru-RU)
+        russianVoice = voices.find(v => v.lang.startsWith('ru') && (v.name.includes('Pavel') || v.name.includes('Dmitry') || v.name.includes('Maxim')))
+                      || voices.find(v => v.lang.startsWith('ru'));
+    }
+
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = loadVoice;
+    }
+
+    function speak(word) {
+        if (!russianVoice) loadVoice();
+        const utter = new SpeechSynthesisUtterance("Где " + word + "?");
+        if (russianVoice) utter.voice = russianVoice;
+        utter.lang = 'ru-RU';
+        utter.pitch = 0.8; 
+        utter.rate = 0.85;
+        synth.cancel();
+        synth.speak(utter);
+    }
+
+    function playStep() {
+        if (currentIndex < sequence.length) {
+            const word = sequence[currentIndex];
+            progress.textContent = `Begriff ${currentIndex + 1} von ${sequence.length}`;
+            feedback.textContent = "Hör genau zu...";
+            feedback.style.color = "var(--primary)";
+            
+            setTimeout(() => {
+                speak(word);
+                feedback.textContent = `Finde: ${word}`;
+            }, 600);
+        } else {
+            finishGame();
+        }
+    }
+
+    function finishGame() {
+        isPlaying = false;
+        feedback.textContent = "🎉 Hervorragend! Alles gefunden.";
+        feedback.style.color = "var(--success)";
+        progress.textContent = "Abgeschlossen";
+        repeatBtn.style.display = "none";
+        restartBtn.style.display = "block";
+        wrapper.classList.remove('playing');
+    }
+
+    startBtn.onclick = () => {
+        isPlaying = true;
+        currentIndex = 0;
+        wrapper.classList.add('playing');
+        startBtn.style.display = 'none';
+        repeatBtn.style.display = 'block';
+        loadVoice();
+        playStep();
+    };
+
+    repeatBtn.onclick = () => {
+        if (isPlaying) speak(sequence[currentIndex]);
+    };
+
+    restartBtn.onclick = () => {
+        restartBtn.style.display = "none";
+        startBtn.click();
+    };
+
+    hotspots.forEach(spot => {
+        spot.onclick = () => {
+            if (!isPlaying) return;
+
+            const targetWord = sequence[currentIndex];
+            const clickedWord = spot.dataset.ru;
+
+            if (clickedWord === targetWord) {
+                // RICHTIG
+                spot.classList.add('correct-flash');
+                feedback.textContent = "Правильно! ✅";
+                feedback.style.color = "var(--success)";
+                
+                setTimeout(() => {
+                    spot.classList.remove('correct-flash');
+                    currentIndex++;
+                    playStep();
+                }, 1200);
+            } else {
+                // FALSCH
+                spot.classList.add('wrong-flash');
+                feedback.textContent = "Нет! Попробуй еще раз. ❌";
+                feedback.style.color = "var(--error)";
+                
+                setTimeout(() => {
+                    spot.classList.remove('wrong-flash');
+                    feedback.textContent = `Finde: ${targetWord}`;
+                    feedback.style.color = "var(--primary)";
+                }, 800);
+            }
+        };
+    });
+
+    // Initialer Ladeversuch
+    loadVoice();
+</script>
+
+</body>
+</html>
