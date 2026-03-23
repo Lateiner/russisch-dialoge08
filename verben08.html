@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Lernspiel: Verben im Schuhladen</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --seller-bg: #f1f8ff;
+            --buyer-bg: #ffffff;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --border-color: #dcdde1;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: #f5f6fa;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+        }
+
+        .instruction {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+        }
+
+        .dialog-row {
+            margin-bottom: 12px;
+            padding: 12px 15px;
+            border-radius: 10px;
+            line-height: 1.8;
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .role-buyer {
+            background-color: var(--buyer-bg);
+            border-left: 5px solid #95a5a6;
+        }
+
+        .role-seller {
+            background-color: var(--seller-bg);
+            border-left: 5px solid #3498db;
+        }
+
+        .role-label {
+            display: block;
+            font-weight: bold;
+            font-size: 0.75rem;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            color: #7f8c8d;
+        }
+
+        /* Drop-down Styling */
+        select {
+            padding: 4px 8px;
+            font-size: 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            background-color: white;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s ease;
+            margin: 0 4px;
+            font-family: inherit;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        select.correct {
+            border-color: var(--success-color);
+            background-color: #f0fff4;
+            color: var(--success-color);
+        }
+
+        select.wrong {
+            border-color: var(--error-color);
+            background-color: #fff5f5;
+            color: var(--error-color);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: background 0.2s;
+        }
+
+        #solution-btn { background-color: var(--primary-color); color: white; }
+        #reset-btn { background-color: #dcdde1; color: #333; }
+
+        @media (max-width: 500px) {
+            .container { padding: 15px; }
+            select { margin: 5px 0; width: 100%; display: block; }
+            .dialog-row { font-size: 0.95rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Dialog: Schuhe kaufen</h1>
+    <p class="instruction">Wähle die richtigen <b>Verben</b> aus.</p>
+
+    <div id="dialog-container">
+        <!-- Der Dialog wird per JavaScript geladen -->
+    </div>
+
+    <div class="controls">
+        <button id="solution-btn">Lösung anzeigen</button>
+        <button id="reset-btn">Neustart</button>
+    </div>
+</div>
+
+<script>
+    // Struktur: Sprecher, Text davor, [Optionen (Option 0 = richtig)], Text danach
+    const dialogVerbs = [
+        { role: "Продавец", parts: ["Здравствуйте! Что вы ", ["ищете", "платите", "берете"], "?"] },
+        { role: "Покупательница", parts: ["Здравствуйте! Я ", ["ищу", "ношу", "плачу"], " коричневые сапоги."] },
+        { role: "Продавец", parts: ["Какой у вас размер?"] },
+        { role: "Покупательница", parts: ["У меня тридцать восьмой размер."] },
+        { role: "Продавец", parts: ["Посмотрите эти. Вам они ", ["нравятся", "стоят", "подходят"], "?"] },
+        { role: "Покупательница", parts: ["Да, я ", ["примерю", "возьму", "ищу"], " их."] },
+        { role: "Продавец", parts: ["Вам ", ["подошли", "пришли", "пошли"], " сапоги?"] },
+        { role: "Покупательница", parts: ["Эти мне немного мало. Можете ", ["принести", "платить", "искать"], " на размер больше?"] },
+        { role: "Продавец", parts: ["Да, конечно. Вот, пожалуйста."] },
+        { role: "Покупательница", parts: ["Эти ", ["подходят", "смотрят", "стоят"], ". Я ", ["возьму", "ищу", "плачу"], " эти сапоги."] },
+        { role: "Продавец", parts: ["Будете ", ["платить", "мерить", "брать"], " картой или наличными?"] },
+        { role: "Покупательница", parts: ["Картой, пожалуйста."] },
+        { role: "Продавец", parts: ["Вот ваш чек. Спасибо за покупку!"] }
+    ];
+
+    const container = document.getElementById('dialog-container');
+
+    function renderDialog() {
+        container.innerHTML = '';
+        dialogVerbs.forEach((line) => {
+            const row = document.createElement('div');
+            row.className = `dialog-row ${line.role === 'Продавец' ? 'role-seller' : 'role-buyer'}`;
+            
+            const label = document.createElement('span');
+            label.className = 'role-label';
+            label.textContent = line.role;
+            row.appendChild(label);
+
+            line.parts.forEach((part) => {
+                if (Array.isArray(part)) {
+                    const select = document.createElement('select');
+                    const correctAnswer = part[0];
+                    
+                    // Optionen mischen
+                    const options = [...part].sort();
+                    
+                    // Platzhalter
+                    const placeholder = document.createElement('option');
+                    placeholder.value = "";
+                    placeholder.textContent = "...";
+                    placeholder.disabled = true;
+                    placeholder.selected = true;
+                    select.appendChild(placeholder);
+
+                    options.forEach(optText => {
+                        const opt = document.createElement('option');
+                        opt.value = optText;
+                        opt.textContent = optText;
+                        select.appendChild(opt);
+                    });
+
+                    select.onchange = () => {
+                        if (select.value === correctAnswer) {
+                            select.className = 'correct';
+                        } else {
+                            select.className = 'wrong';
+                        }
+                    };
+                    
+                    select.dataset.correct = correctAnswer;
+                    row.appendChild(select);
+                } else {
+                    const span = document.createElement('span');
+                    span.textContent = part;
+                    row.appendChild(span);
+                }
+            });
+            container.appendChild(row);
+        });
+    }
+
+    document.getElementById('solution-btn').onclick = () => {
+        document.querySelectorAll('select').forEach(select => {
+            select.value = select.dataset.correct;
+            select.className = 'correct';
+        });
+    };
+
+    document.getElementById('reset-btn').onclick = () => {
+        renderDialog();
+    };
+
+    // Initialisierung
+    renderDialog();
+</script>
+
+</body>
+</html>
