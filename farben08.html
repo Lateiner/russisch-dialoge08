@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Grammatik: Adjektiv-Endungen</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f0f4f8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .progress {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        /* Aufgaben-Bereich */
+        #game-view { display: block; }
+        
+        /* End-Bereich (Standardmäßig versteckt) */
+        #result-view { 
+            display: none; 
+            padding: 30px 10px;
+        }
+
+        .task-card {
+            background: #f9fbff;
+            border: 2px solid #e2e8f0;
+            border-radius: 15px;
+            padding: 30px 20px;
+            margin-bottom: 25px;
+        }
+
+        .emoji { font-size: 3.5rem; margin-bottom: 10px; display: block; }
+        
+        .phrase {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: var(--primary);
+            line-height: 1.2;
+        }
+
+        .gap {
+            color: var(--accent);
+            border-bottom: 3px solid var(--accent);
+            padding: 0 8px;
+            min-width: 60px;
+            display: inline-block;
+        }
+
+        .gender-hint {
+            display: block;
+            font-size: 0.95rem;
+            color: #64748b;
+            margin-top: 15px;
+            font-style: italic;
+        }
+
+        /* Antwort-Buttons */
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .option-btn {
+            padding: 14px;
+            background: white;
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--primary);
+        }
+
+        .option-btn:hover { border-color: var(--accent); background: #f1f9ff; }
+        .option-btn.correct { background-color: var(--success); color: white; border-color: var(--success); }
+        .option-btn.wrong { background-color: var(--error); color: white; border-color: var(--error); }
+
+        /* Steuerung */
+        .controls { margin-top: 25px; display: flex; gap: 10px; justify-content: center; }
+        
+        button.nav { padding: 12px 24px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 1rem; }
+        #next-btn { background: var(--primary); color: white; display: none; }
+        #restart-btn { background: #e2e8f0; color: #475569; }
+
+        #feedback { margin-top: 20px; font-weight: bold; min-height: 24px; font-size: 1.1rem; }
+
+        @media (max-width: 480px) {
+            .phrase { font-size: 1.3rem; }
+            .options-grid { grid-template-columns: 1fr; }
+            .container { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Ansicht während des Spiels -->
+    <div id="game-view">
+        <div class="progress" id="progress">Aufgabe 1 von 8</div>
+        <h1 style="font-size: 1.4rem; color: var(--primary);">Welche Endung passt?</h1>
+
+        <div class="task-card">
+            <span class="emoji" id="emoji">👗</span>
+            <div class="phrase">
+                <span id="adj-stem">син</span><span id="adj-gap" class="gap">...</span> <span id="noun">платье</span>
+            </div>
+            <span class="gender-hint" id="hint">Lade Hinweis...</span>
+        </div>
+
+        <div id="options" class="options-grid"></div>
+
+        <div id="feedback"></div>
+
+        <div class="controls">
+            <button id="next-btn" class="nav" onclick="nextQuestion()">Nächste Aufgabe →</button>
+        </div>
+    </div>
+
+    <!-- Ansicht nach Abschluss -->
+    <div id="result-view">
+        <span class="emoji">🏆</span>
+        <h2 style="color: var(--primary);">Hervorragend!</h2>
+        <p>Du hast alle 8 Aufgaben gelöst und die Adjektiv-Endungen für Kleidung gemeistert.</p>
+        <div class="controls">
+            <button class="nav" style="background: var(--primary); color: white;" onclick="resetGame()">Nochmal von vorne</button>
+        </div>
+    </div>
+
+    <!-- Permanenter Neustart-Button unten (optional) -->
+    <div class="controls" id="reset-control">
+        <button id="restart-btn" class="nav" onclick="resetGame()">Neustart</button>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        { noun: "платье", stem: "син", emoji: "👗", gender: "Neutrum (sächlich)", correct: "ее", options: ["ий", "яя", "ее", "ие"] },
+        { noun: "свитер", stem: "красн", emoji: "🧥", gender: "Maskulin (männlich)", correct: "ый", options: ["ый", "ая", "ое", "ые"] },
+        { noun: "юбка", stem: "черн", emoji: "👗", gender: "Feminin (weiblich)", correct: "ая", options: ["ый", "ая", "ое", "ые"] },
+        { noun: "сапоги", stem: "коричнев", emoji: "👢", gender: "Plural (Mehrzahl)", correct: "ые", options: ["ый", "ая", "ое", "ые"] },
+        { noun: "рубашка", stem: "голуб", emoji: "👔", gender: "Feminin (weiblich)", correct: "ая", options: ["ой", "ая", "ое", "ые"] },
+        { noun: "джинсы", stem: "черн", emoji: "👖", gender: "Plural (Mehrzahl)", correct: "ые", options: ["ый", "ая", "ое", "ые"] },
+        { noun: "пальто", stem: "сер", emoji: "🧥", gender: "Neutrum (sächlich)", correct: "ое", options: ["ый", "ая", "ое", "ые"] },
+        { noun: "куртка", stem: "зелён", emoji: "🧥", gender: "Feminin (weiblich)", correct: "ая", options: ["ый", "ая", "ое", "ые"] }
+    ];
+
+    let currentIdx = 0;
+
+    function initQuestion() {
+        // Ansichten umschalten
+        document.getElementById('game-view').style.display = "block";
+        document.getElementById('result-view').style.display = "none";
+        document.getElementById('restart-btn').style.display = "block";
+
+        const q = questions[currentIdx];
+        
+        // Daten befüllen
+        document.getElementById('progress').textContent = `Aufgabe ${currentIdx + 1} von ${questions.length}`;
+        document.getElementById('emoji').textContent = q.emoji;
+        document.getElementById('adj-stem').textContent = q.stem;
+        document.getElementById('noun').textContent = q.noun;
+        document.getElementById('hint').textContent = `Hinweis: „${q.noun}“ ist ${q.gender}.`;
+        
+        // Anzeige zurücksetzen
+        const gap = document.getElementById('adj-gap');
+        gap.textContent = "...";
+        gap.style.color = "var(--accent)";
+        document.getElementById('feedback').textContent = "";
+        document.getElementById('next-btn').style.display = "none";
+
+        // Buttons generieren
+        const optionsDiv = document.getElementById('options');
+        optionsDiv.innerHTML = '';
+        q.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.textContent = opt;
+            btn.onclick = () => checkAnswer(btn, opt);
+            optionsDiv.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(btn, choice) {
+        const q = questions[currentIdx];
+        const feedback = document.getElementById('feedback');
+        const gap = document.getElementById('adj-gap');
+        const allBtns = document.querySelectorAll('.option-btn');
+
+        if (choice === q.correct) {
+            btn.classList.add('correct');
+            gap.textContent = q.correct;
+            gap.style.color = "var(--success)";
+            feedback.style.color = "var(--success)";
+            feedback.textContent = "Richtig! ✅";
+            allBtns.forEach(b => b.style.pointerEvents = "none");
+            document.getElementById('next-btn').style.display = "block";
+        } else {
+            btn.classList.add('wrong');
+            feedback.style.color = "var(--error)";
+            feedback.textContent = "Leider falsch. Versuch es noch einmal!";
+            setTimeout(() => {
+                btn.classList.remove('wrong');
+            }, 800);
+        }
+    }
+
+    function nextQuestion() {
+        currentIdx++;
+        if (currentIdx < questions.length) {
+            initQuestion();
+        } else {
+            showEnd();
+        }
+    }
+
+    function showEnd() {
+        document.getElementById('game-view').style.display = "none";
+        document.getElementById('result-view').style.display = "block";
+        document.getElementById('restart-btn').style.display = "none";
+    }
+
+    function resetGame() {
+        // Seite neu laden ist die sicherste Methode, um alle Zustände zu resetten
+        location.reload();
+    }
+
+    // Erster Start
+    window.onload = initQuestion;
+</script>
+
+</body>
+</html>
