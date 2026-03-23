@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wortgitter: Schuhkauf</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --bg: #f4f7f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        h1 { font-size: 1.3rem; color: var(--primary); margin-bottom: 10px; }
+
+        /* Wortliste */
+        .word-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .word-item {
+            padding: 4px 8px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.85rem;
+            color: var(--primary);
+            transition: 0.3s;
+        }
+
+        .word-item.found {
+            text-decoration: line-through;
+            background-color: var(--success);
+            color: white;
+            border-color: var(--success);
+        }
+
+        /* Das Gitter */
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 4px;
+            margin: 0 auto;
+            max-width: 100%;
+        }
+
+        .cell {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            touch-action: manipulation;
+        }
+
+        .cell.selected {
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .cell.found {
+            background-color: var(--success) !important;
+            color: white !important;
+            border-color: var(--success);
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            flex: 1;
+        }
+
+        #reset-btn { background: #eee; color: #333; }
+        #solution-btn { background: var(--primary); color: white; }
+
+        @media (max-width: 400px) {
+            .cell { font-size: 0.9rem; }
+            h1 { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Найди слова (Suchsel)</h1>
+    
+    <div class="word-list" id="word-list"></div>
+
+    <div id="grid"></div>
+
+    <div class="controls">
+        <button id="solution-btn">Lösung anzeigen</button>
+        <button id="reset-btn">Neustart</button>
+    </div>
+</div>
+
+<script>
+    // Begriffe aus Dialog 2 und ihre Koordinaten [row, col]
+    const wordsConfig = [
+        { word: "САПОГИ", coords: [[0,1], [0,2], [0,3], [0,4], [0,5], [0,6]] },
+        { word: "РАЗМЕР", coords: [[1,0], [2,0], [3,0], [4,0], [5,0], [6,0]] },
+        { word: "ЧЕК", coords: [[1,1], [1,2], [1,3]] },
+        { word: "КАРТА", coords: [[3,5], [3,6], [3,7], [3,8], [3,9]] },
+        { word: "МАЛО", coords: [[5,2], [6,2], [7,2], [8,2]] },
+        { word: "ВЕЛИКО", coords: [[8,4], [8,5], [8,6], [8,7], [8,8], [8,9]] },
+        { word: "ОБУВЬ", coords: [[4,1], [5,1], [6,1], [7,1], [8,1]] },
+        { word: "ВЗЯТЬ", coords: [[9,0], [9,1], [9,2], [9,3], [9,4]] }
+    ];
+
+    // 10x10 Gitter Daten
+    const gridData = [
+        ['Ж', 'С', 'А', 'П', 'О', 'Г', 'И', 'Л', 'М', 'Н'],
+        ['Р', 'Ч', 'Е', 'К', 'Б', 'В', 'Г', 'Д', 'Е', 'Ё'],
+        ['А', 'О', 'З', 'И', 'Й', 'К', 'Л', 'М', 'Н', 'О'],
+        ['З', 'Б', 'П', 'Р', 'С', 'К', 'А', 'Р', 'Т', 'А'],
+        ['М', 'У', 'Т', 'У', 'Ф', 'Л', 'И', 'Ц', 'Ч', 'Ш'],
+        ['Е', 'В', 'М', 'Ъ', 'Ы', 'Ь', 'Э', 'Ю', 'Я', 'А'],
+        ['Р', 'Ь', 'А', 'Г', 'Д', 'Е', 'Ё', 'Ж', 'З', 'И'],
+        ['Б', 'В', 'Л', 'К', 'Л', 'М', 'Н', 'О', 'П', 'Р'],
+        ['С', 'Т', 'О', 'Х', 'В', 'Е', 'Л', 'И', 'К', 'О'],
+        ['В', 'З', 'Я', 'Т', 'Ь', 'Э', 'Ю', 'Я', 'А', 'Б']
+    ];
+
+    let selectedCells = [];
+    let foundWords = [];
+
+    function init() {
+        foundWords = [];
+        selectedCells = [];
+        renderList();
+        renderGrid();
+    }
+
+    function renderList() {
+        const listEl = document.getElementById('word-list');
+        listEl.innerHTML = '';
+        wordsConfig.forEach(item => {
+            const span = document.createElement('span');
+            span.className = 'word-item';
+            span.id = 'word-' + item.word;
+            span.textContent = item.word;
+            listEl.appendChild(span);
+        });
+    }
+
+    function renderGrid() {
+        const gridEl = document.getElementById('grid');
+        gridEl.innerHTML = '';
+        for (let r = 0; r < 10; r++) {
+            for (let c = 0; c < 10; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.textContent = gridData[r][c];
+                cell.dataset.r = r;
+                cell.dataset.c = c;
+                cell.onclick = () => handleCellClick(cell, r, c);
+                gridEl.appendChild(cell);
+            }
+        }
+    }
+
+    function handleCellClick(cell, r, c) {
+        if (cell.classList.contains('found')) return;
+
+        cell.classList.toggle('selected');
+        const coordStr = `${r},${c}`;
+        
+        const idx = selectedCells.indexOf(coordStr);
+        if (idx > -1) selectedCells.splice(idx, 1);
+        else selectedCells.push(coordStr);
+
+        checkWords();
+    }
+
+    function checkWords() {
+        wordsConfig.forEach(item => {
+            if (foundWords.includes(item.word)) return;
+
+            const allMatch = item.coords.every(coord => {
+                return selectedCells.includes(`${coord[0]},${coord[1]}`);
+            });
+
+            if (allMatch) {
+                markWordFound(item);
+            }
+        });
+    }
+
+    function markWordFound(item) {
+        if (!foundWords.includes(item.word)) {
+            foundWords.push(item.word);
+        }
+        document.getElementById('word-' + item.word).classList.add('found');
+        
+        item.coords.forEach(coord => {
+            const cell = document.querySelector(`.cell[data-r="${coord[0]}"][data-c="${coord[1]}"]`);
+            cell.classList.remove('selected');
+            cell.classList.add('found');
+            
+            const sIdx = selectedCells.indexOf(`${coord[0]},${coord[1]}`);
+            if (sIdx > -1) selectedCells.splice(sIdx, 1);
+        });
+
+        if (foundWords.length === wordsConfig.length) {
+            setTimeout(() => alert("Поздравляю! Ты нашёл alle Wörter!"), 300);
+        }
+    }
+
+    document.getElementById('solution-btn').onclick = () => {
+        wordsConfig.forEach(item => {
+            markWordFound(item);
+        });
+    };
+
+    document.getElementById('reset-btn').onclick = () => {
+        location.reload();
+    };
+
+    init();
+</script>
+
+</body>
+</html>
