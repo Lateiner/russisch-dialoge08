@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Memory: Dialog-Paare</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --bg: #f8f9fa;
+            --card-back: #34495e;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.3rem;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .instruction {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        /* Spielfeld */
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            perspective: 1000px;
+            min-height: 400px;
+        }
+
+        /* Karte */
+        .card {
+            height: 110px;
+            cursor: pointer;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s, opacity 0.5s;
+            touch-action: manipulation;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        /* Verschwinden bei Erfolg */
+        .card.hidden-matched {
+            opacity: 0;
+            pointer-events: none;
+            transform: rotateY(180deg) scale(0.5);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 8px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            box-sizing: border-box;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border: 2px solid white;
+        }
+
+        .card-back {
+            background-color: var(--card-back);
+            color: white;
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .card-front {
+            background-color: white;
+            transform: rotateY(180deg);
+            color: var(--primary);
+            border: 3px solid #eee;
+            line-height: 1.3;
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        button {
+            padding: 12px 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+
+        #solution-btn { background: var(--primary); color: white; }
+        #reset-btn { background: #e0e0e0; color: #333; }
+
+        #msg {
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+            color: var(--success);
+            min-height: 24px;
+        }
+
+        @media (max-width: 480px) {
+            .memory-grid { gap: 8px; }
+            .card { height: 100px; }
+            .card-face { font-size: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Dialog-Memory</h1>
+    <p class="instruction">Finde die passenden Paare. Korrekte Treffer verschwinden!</p>
+
+    <div class="memory-grid" id="grid"></div>
+
+    <div id="msg"></div>
+
+    <div class="controls">
+        <button id="solution-btn">Lösung anzeigen</button>
+        <button id="reset-btn">Neustart</button>
+    </div>
+</div>
+
+<script>
+    const pairs = [
+        { q: "Здравствуйте! Что вы ищете?", a: "Я ищу длинное платье синего цвета.", id: 0 },
+        { q: "Какой у вас размер?", a: "Обычно эмка, но иногда эска.", id: 1 },
+        { q: "Вам подошли платья?", a: "Первое мне велико.", id: 2 },
+        { q: "Будете платить картой или наличными?", a: "Картой, пожалуйста.", id: 3 },
+        { q: "Какого цвета свитер вам нужен?", a: "Мне нужен свитер красного цвета.", id: 4 },
+        { q: "Можете принести на размер меньше?", a: "Да, я принесу размер S.", id: 5 }
+    ];
+
+    // Farben für die Lösung (6 Paare)
+    const pairColors = [
+        "#FFADAD", "#FFD6A5", "#FDFFB6", "#CAFFBF", "#9BF6FF", "#A0C4FF"
+    ];
+
+    let cards = [];
+    let flippedCards = [];
+    let matchedCount = 0;
+    let lockBoard = false;
+
+    function init() {
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+        cards = [];
+        flippedCards = [];
+        matchedCount = 0;
+        lockBoard = false;
+        document.getElementById('msg').textContent = '';
+
+        let cardData = [];
+        pairs.forEach(p => {
+            cardData.push({ text: p.q, id: p.id, type: 'q' });
+            cardData.push({ text: p.a, id: p.id, type: 'a' });
+        });
+
+        cardData.sort(() => Math.random() - 0.5);
+
+        cardData.forEach((data, index) => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.dataset.id = data.id;
+            
+            card.innerHTML = `
+                <div class="card-face card-back">?</div>
+                <div class="card-face card-front">${data.text}</div>
+            `;
+
+            card.onclick = () => flip(card);
+            grid.appendChild(card);
+            cards.push(card);
+        });
+    }
+
+    function flip(card) {
+        if (lockBoard || card.classList.contains('flipped') || card.classList.contains('hidden-matched')) return;
+
+        card.classList.add('flipped');
+        flippedCards.push(card);
+
+        if (flippedCards.length === 2) {
+            check();
+        }
+    }
+
+    function check() {
+        lockBoard = true;
+        const [c1, c2] = flippedCards;
+        const isMatch = c1.dataset.id === c2.dataset.id;
+
+        if (isMatch) {
+            matchedCount++;
+            setTimeout(() => {
+                c1.classList.add('hidden-matched');
+                c2.classList.add('hidden-matched');
+                flippedCards = [];
+                lockBoard = false;
+                if (matchedCount === pairs.length) {
+                    document.getElementById('msg').textContent = "🎉 Glückwunsch! Alles gelöst.";
+                }
+            }, 800);
+        } else {
+            setTimeout(() => {
+                c1.classList.remove('flipped');
+                c2.classList.remove('flipped');
+                flippedCards = [];
+                lockBoard = false;
+            }, 1200);
+        }
+    }
+
+    // Lösung anzeigen: Alle Karten erscheinen wieder, drehen sich und sind farbig markiert
+    document.getElementById('solution-btn').onclick = () => {
+        document.getElementById('msg').textContent = "Lösung wird angezeigt.";
+        lockBoard = true;
+        
+        cards.forEach(card => {
+            card.classList.remove('hidden-matched');
+            card.classList.add('flipped');
+            const color = pairColors[card.dataset.id];
+            card.querySelector('.card-front').style.borderColor = color;
+            card.querySelector('.card-front').style.backgroundColor = color + "44"; // Transparente Farbe
+            card.onclick = null; // Klick deaktivieren
+        });
+    };
+
+    document.getElementById('reset-btn').onclick = init;
+
+    init();
+</script>
+
+</body>
+</html>
