@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Hör-Spiel: Einkaufen</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --error: #e74c3c;
+            --bg: #f0f2f5;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .status-panel {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        #feedback {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        /* Bildbereich */
+        .image-wrapper {
+            position: relative;
+            width: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+        }
+
+        .shop-img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Hotspots */
+        .hotspot {
+            position: absolute;
+            width: 8%; /* Relative Größe für Responsivität */
+            aspect-ratio: 1/1;
+            background: rgba(52, 152, 219, 0.3);
+            border: 2px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: none; /* Erst beim Start zeigen */
+        }
+
+        .playing .hotspot {
+            display: block;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(255, 255, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+        }
+
+        .hotspot:active {
+            transform: translate(-50%, -50%) scale(0.9);
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 15px 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        #start-btn { background: var(--success); color: white; width: 100%; }
+        #repeat-btn { background: var(--accent); color: white; display: none; width: 100%; }
+
+        /* Farbliches Feedback bei Klick */
+        .correct-click { background: rgba(39, 174, 96, 0.8) !important; border-color: #fff !important; }
+        .wrong-click { background: rgba(231, 76, 60, 0.8) !important; border-color: #fff !important; }
+
+        @media (max-width: 500px) {
+            .hotspot { width: 12%; }
+            button { padding: 12px; font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container" id="game-container">
+    <div class="status-panel">
+        <div id="feedback">Bereit?</div>
+        <div id="voice-status" style="font-size: 0.8rem; color: #999; margin-top: 5px;"></div>
+    </div>
+
+    <div class="image-wrapper">
+        <img src="shop.jpg" alt="Laden" class="shop-img" id="main-image">
+        
+        <!-- Hotspots exakt nach deinem Bild positioniert -->
+        <div class="hotspot" style="top: 10%; left: 50%;" data-ru="Одежда" title="Schild"></div>
+        <div class="hotspot" style="top: 35%; left: 15%;" data-ru="Платья" title="Kleider"></div>
+        <div class="hotspot" style="top: 30%; left: 74%;" data-ru="Рубашка" title="Hemd"></div>
+        <div class="hotspot" style="top: 26%; left: 44%;" data-ru="Сапоги" title="Stiefel oben"></div>
+        <div class="hotspot" style="top: 50%; left: 44%;" data-ru="Сапоги" title="Stiefel mitte"></div>
+        <div class="hotspot" style="top: 75%; left: 18%;" data-ru="Юбка" title="Röcke"></div>
+        <div class="hotspot" style="top: 65%; left: 68%;" data-ru="Джинсы" title="Jeans"></div>
+        <div class="hotspot" style="top: 75%; left: 90%;" data-ru="Куртка" title="Jacken"></div>
+        <div class="hotspot" style="top: 70%; left: 48%;" data-ru="Кроссовки" title="Sneaker"></div>
+        <div class="hotspot" style="top: 40%; left: 35%;" data-ru="Свитер" title="Pullover"></div>
+    </div>
+
+    <div class="controls">
+        <button id="start-btn">Spiel starten</button>
+        <button id="repeat-btn">🔊 Nochmal hören</button>
+    </div>
+</div>
+
+<script>
+    const hotspots = document.querySelectorAll('.hotspot');
+    const startBtn = document.getElementById('start-btn');
+    const repeatBtn = document.getElementById('repeat-btn');
+    const feedback = document.getElementById('feedback');
+    const voiceStatus = document.getElementById('voice-status');
+    const container = document.getElementById('game-container');
+
+    let currentItem = null;
+    let isPlaying = false;
+    let russianVoice = null;
+    const synth = window.speechSynthesis;
+
+    // Funktion zum Finden der russischen Stimme
+    function findRussianVoice() {
+        const voices = synth.getVoices();
+        // Suche gezielt nach russischen männlichen Namen oder einfach Russisch
+        let voice = voices.find(v => v.lang === 'ru-RU' && (v.name.includes('Pavel') || v.name.includes('Dmitry') || v.name.includes('Maxim')));
+        if (!voice) voice = voices.find(v => v.lang === 'ru-RU' || v.lang.startsWith('ru'));
+        
+        if (voice) {
+            russianVoice = voice;
+            voiceStatus.textContent = "Russische Stimme geladen: " + voice.name;
+        } else {
+            voiceStatus.textContent = "Keine russische Stimme gefunden! Bitte in den Systemeinstellungen installieren.";
+            voiceStatus.style.color = "red";
+        }
+    }
+
+    // Stimmen laden (manche Browser brauchen ein Event)
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = findRussianVoice;
+    }
+
+    function speak(text) {
+        if (!russianVoice) findRussianVoice(); // Sicherheits-Check
+        
+        const utter = new SpeechSynthesisUtterance(text);
+        if (russianVoice) {
+            utter.voice = russianVoice;
+        }
+        utter.lang = 'ru-RU';
+        utter.pitch = 0.8; // Männlicherer Klang
+        utter.rate = 0.85; // Schön langsam
+        
+        synth.cancel(); // Vorherige Sprachausgabe stoppen
+        synth.speak(utter);
+    }
+
+    function startNewTurn() {
+        const randomSpot = hotspots[Math.floor(Math.random() * hotspots.length)];
+        currentItem = randomSpot.dataset.ru;
+        
+        feedback.textContent = "Hör genau zu...";
+        
+        setTimeout(() => {
+            speak("Где " + currentItem + "?");
+            feedback.textContent = "Wo ist: " + currentItem + "?";
+        }, 600);
+    }
+
+    startBtn.onclick = () => {
+        findRussianVoice(); // Direkt beim Klick nochmal suchen
+        isPlaying = true;
+        container.classList.add('playing');
+        startBtn.style.display = 'none';
+        repeatBtn.style.display = 'block';
+        startNewTurn();
+    };
+
+    repeatBtn.onclick = () => {
+        if (currentItem) speak("Где " + currentItem + "?");
+    };
+
+    hotspots.forEach(spot => {
+        spot.onclick = (e) => {
+            if (!isPlaying) return;
+
+            if (spot.dataset.ru === currentItem) {
+                // RICHTIG
+                feedback.textContent = "Правильно! (Richtig!) ✅";
+                feedback.style.color = "var(--success)";
+                spot.classList.add('correct-click');
+                
+                setTimeout(() => {
+                    spot.classList.remove('correct-click');
+                    feedback.style.color = "var(--primary)";
+                    startNewTurn();
+                }, 1500);
+            } else {
+                // FALSCH
+                feedback.textContent = "Нет! (Nein!) ❌";
+                feedback.style.color = "var(--error)";
+                spot.classList.add('wrong-click');
+                
+                setTimeout(() => {
+                    spot.classList.remove('wrong-click');
+                    feedback.textContent = "Wo ist: " + currentItem + "?";
+                    feedback.style.color = "var(--primary)";
+                }, 800);
+            }
+        };
+    });
+
+    // Initialer Versuch zu laden
+    findRussianVoice();
+</script>
+
+</body>
+</html>
