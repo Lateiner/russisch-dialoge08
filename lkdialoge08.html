@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch Lernkartei: Kleidung & Einkauf</title>
+    <style>
+        :root {
+            --primary-green: #2e7d32;
+            --light-green: #e8f5e9;
+            --accent-green: #4caf50;
+            --dark-green: #1b5e20;
+            --text-color: #333;
+            --bg-color: #f1f8e9;
+            --card-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--primary-green);
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        /* Fortschrittsanzeige */
+        .progress {
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: var(--primary-green);
+        }
+
+        /* 3D Flip Karte */
+        .card-scene {
+            width: 100%;
+            height: 300px;
+            perspective: 1000px;
+            cursor: pointer;
+            margin-bottom: 30px;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            box-shadow: var(--card-shadow);
+            border-radius: 15px;
+        }
+
+        .card-inner.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background-color: white;
+            border: 2px solid var(--accent-green);
+            border-radius: 15px;
+        }
+
+        .card-back {
+            background-color: var(--light-green);
+            transform: rotateY(180deg);
+        }
+
+        .card-content {
+            font-size: 2rem;
+            word-wrap: break-word;
+            max-width: 100%;
+        }
+
+        .card-note {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #666;
+            font-style: italic;
+        }
+
+        /* Navigation & Buttons */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: var(--primary-green);
+            color: white;
+            min-width: 120px;
+        }
+
+        button:hover {
+            background-color: var(--dark-green);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background-color: var(--accent-green);
+        }
+
+        .keyboard-hint {
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: #777;
+        }
+
+        /* Responsivität */
+        @media (max-width: 480px) {
+            .card-scene { height: 250px; }
+            .card-content { font-size: 1.5rem; }
+            button { padding: 10px 15px; font-size: 0.9rem; min-width: 100px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 id="title">Russisch Vokabeltrainer</h1>
+    <div class="progress" id="progress">1 / 56</div>
+
+    <div class="card-scene" id="card-trigger">
+        <div class="card-inner" id="card-inner">
+            <div class="card-front">
+                <div class="card-content" id="front-text">Vorderseite</div>
+            </div>
+            <div class="card-back">
+                <div class="card-content" id="back-text">Rückseite</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="prev-btn">← Vorherige</button>
+        <button id="next-btn">Nächste →</button>
+        <button id="home-btn" class="btn-secondary">An den Anfang</button>
+        <button id="shuffle-btn" class="btn-secondary">Mischen</button>
+    </div>
+
+    <div class="keyboard-hint">
+        Tipp: Pfeiltasten zum Navigieren, Leertaste/Enter zum Umdrehen, Pos1 für Start.
+    </div>
+</div>
+
+<script>
+    // Vokabelliste als Rohdaten
+    const rawData = `
+оде́жда	Kleidung
+о́бувь	Schuhe
+пла́тье	Kleid
+ю́бка	Rock
+сви́тер	Pullover
+сапоги́	Stiefel
+руба́шка	Hemd / Bluse
+джи́нсы	Jeans
+кроссо́вки	Sneaker
+ку́ртка	Jacke
+пальто́	Mantel
+магази́н	Laden / Geschäft
+приме́рочная	Umkleidekabine
+ка́сса	Kasse
+разме́р	Größe
+э́ска	Größe S
+э́мка	Größe M
+э́лька	Größe L
+иксэ́ска	Größe XS
+иксэ́лька	Größe XL
+чек	Kassenbon
+поку́пка	Einkauf
+ка́рта	Karte
+нали́чные	Bargeld
+цвет	Farbe
+три́дцать восьмо́й	achtunddreißigster
+со́рок второ́й	zweiundvierzigster
+иска́ть / поиска́ть	suchen
+ме́рить / приме́рить	anprobieren
+подходи́ть / подойти́	passen / stehen
+брать / взять	nehmen / kaufen
+плати́ть / заплати́ть	bezahlen
+приноси́ть / принести́	bringt
+нра́виться / понра́виться	gefallen
+кра́сный	rot
+си́ний	blau
+голубо́й	hellblau
+чёрный	schwarz
+бе́лый	weiß
+кори́чневый	braun
+зелёный	grün
+жёлтый	gelb
+се́рый	grau
+велико́	zu groß (Passform)
+мало́	zu klein (Passform)
+бо́льше	größer
+ме́ньше	kleiner
+дли́нный	lang
+коро́ткий	kurz
+у́зкий	eng
+широ́кий	weit
+доро́же	teurer
+деше́вле	billiger
+обы́чно	normalerweise
+иногда́	manchmal
+ну́жен / нужна́ / ну́жно / ну́жны	notwendig / nötig / brauchen`;
+
+    let cards = [];
+    let currentIndex = 0;
+
+    // Daten parsen
+    function parseData() {
+        const lines = rawData.trim().split('\n');
+        cards = lines.map(line => {
+            const parts = line.split('\t');
+            return {
+                front: parts[0].trim(),
+                back: parts[1].trim()
+            };
+        });
+    }
+
+    // Karte aktualisieren
+    function updateCard() {
+        const cardInner = document.getElementById('card-inner');
+        // Erst zurückdrehen, wenn wir die Karte wechseln
+        cardInner.classList.remove('is-flipped');
+        
+        setTimeout(() => {
+            const front = document.getElementById('front-text');
+            const back = document.getElementById('back-text');
+            const current = cards[currentIndex];
+
+            front.textContent = current.front;
+            back.textContent = current.back;
+
+            // Dynamische Schriftgröße
+            adjustFontSize(front, current.front);
+            adjustFontSize(back, current.back);
+
+            document.getElementById('progress').textContent = `${currentIndex + 1} / ${cards.length}`;
+        }, 150); // Kleiner Delay für glatteren Übergang beim Blättern
+    }
+
+    function adjustFontSize(element, text) {
+        if (text.length > 25) {
+            element.style.fontSize = "1.2rem";
+        } else if (text.length > 15) {
+            element.style.fontSize = "1.6rem";
+        } else {
+            element.style.fontSize = "2.2rem";
+        }
+    }
+
+    function flipCard() {
+        document.getElementById('card-inner').classList.toggle('is-flipped');
+    }
+
+    function nextCard() {
+        if (currentIndex < cards.length - 1) {
+            currentIndex++;
+            updateCard();
+        }
+    }
+
+    function prevCard() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            updateCard();
+        }
+    }
+
+    function goToStart() {
+        currentIndex = 0;
+        updateCard();
+    }
+
+    function shuffleCards() {
+        // Fisher-Yates Shuffle
+        for (let i = cards.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [cards[i], cards[j]] = [cards[j], cards[i]];
+        }
+        currentIndex = 0;
+        updateCard();
+    }
+
+    // Event Listener
+    document.getElementById('card-trigger').addEventListener('click', flipCard);
+    document.getElementById('next-btn').addEventListener('click', nextCard);
+    document.getElementById('prev-btn').addEventListener('click', prevCard);
+    document.getElementById('home-btn').addEventListener('click', goToStart);
+    document.getElementById('shuffle-btn').addEventListener('click', shuffleCards);
+
+    // Tastatursteuerung
+    document.addEventListener('keydown', (e) => {
+        switch(e.key) {
+            case ' ':
+            case 'Enter':
+                e.preventDefault(); // Verhindert Scrollen bei Leertaste
+                flipCard();
+                break;
+            case 'ArrowRight':
+                nextCard();
+                break;
+            case 'ArrowLeft':
+                prevCard();
+                break;
+            case 'Home':
+                goToStart();
+                break;
+        }
+    });
+
+    // Initialisierung
+    parseData();
+    updateCard();
+</script>
+
+</body>
+</html>
