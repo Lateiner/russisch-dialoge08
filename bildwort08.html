@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Vokabelmatch: Kleidung & Farben</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --bg: #fdfefe;
+            --tile-border: #e0e6ed;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .instruction {
+            text-align: center;
+            color: #5a67d8;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .match-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .tile {
+            background: var(--bg);
+            border: 2px solid var(--tile-border);
+            border-radius: 12px;
+            padding: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            min-height: 60px;
+            font-size: 1.1rem;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            touch-action: manipulation;
+        }
+
+        .tile.emoji {
+            font-size: 2.2rem;
+        }
+
+        .tile.selected {
+            border-color: var(--accent);
+            background-color: #ebf8ff;
+            transform: scale(1.03);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2);
+        }
+
+        /* Korrekte Paare erhalten dynamische Farben via JS */
+        .tile.correct {
+            cursor: default;
+            pointer-events: none;
+            border: 2px solid rgba(0,0,0,0.1);
+            color: #1a202c;
+            font-weight: bold;
+        }
+
+        .tile.wrong {
+            border-color: #fc8181;
+            background-color: #fff5f5;
+            animation: shake 0.4s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 25px;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: opacity 0.2s;
+        }
+
+        #solution-btn { background: var(--primary); color: white; }
+        #reset-btn { background: #edf2f7; color: #4a5568; }
+
+        @media (max-width: 500px) {
+            .tile { font-size: 1rem; padding: 8px; }
+            .tile.emoji { font-size: 1.8rem; }
+            h1 { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Vokabeln & Bilder</h1>
+    <p class="instruction">Finde die 8 Paare!</p>
+
+    <div class="match-grid">
+        <div class="column" id="word-col"></div>
+        <div class="column" id="img-col"></div>
+    </div>
+
+    <div id="feedback" style="text-align:center; margin-top:15px; font-weight:bold; color:var(--primary);"></div>
+
+    <div class="controls">
+        <button id="solution-btn">Lösung anzeigen</button>
+        <button id="reset-btn">Neustart</button>
+    </div>
+</div>
+
+<script>
+    // 8 Kleidungsstücke aus dem Dialog-Umfeld
+    const vocabulary = [
+        { id: 0, word: "платье", emoji: "👗" },
+        { id: 1, word: "юбка", emoji: "👚" },
+        { id: 2, word: "свитер", emoji: "🧥" },
+        { id: 3, word: "сапоги", emoji: "👢" },
+        { id: 4, word: "рубашка", emoji: "👔" },
+        { id: 5, word: "джинсы", emoji: "👖" },
+        { id: 6, word: "кроссовки", emoji: "👟" },
+        { id: 7, word: "куртка", emoji: "🧥" }
+    ];
+
+    // Farben für die Paare bei der Lösung (sanfte Pastelltöne)
+    const pairColors = [
+        "#FFADAD", "#FFD6A5", "#FDFFB6", "#CAFFBF", 
+        "#9BF6FF", "#A0C4FF", "#BDB2FF", "#FFC6FF"
+    ];
+
+    let selectedWord = null;
+    let selectedEmoji = null;
+    let foundCount = 0;
+
+    function init() {
+        foundCount = 0;
+        selectedWord = null;
+        selectedEmoji = null;
+        document.getElementById('feedback').textContent = "";
+        
+        const shuffledWords = [...vocabulary].sort(() => Math.random() - 0.5);
+        const shuffledEmojis = [...vocabulary].sort(() => Math.random() - 0.5);
+
+        render(shuffledWords, shuffledEmojis);
+    }
+
+    function render(words, emojis) {
+        const wCol = document.getElementById('word-col');
+        const eCol = document.getElementById('img-col');
+        wCol.innerHTML = '';
+        eCol.innerHTML = '';
+
+        words.forEach(item => {
+            const tile = document.createElement('div');
+            tile.className = 'tile';
+            tile.textContent = item.word;
+            tile.dataset.id = item.id;
+            tile.onclick = () => selectTile(tile, 'word');
+            wCol.appendChild(tile);
+        });
+
+        emojis.forEach(item => {
+            const tile = document.createElement('div');
+            tile.className = 'tile emoji';
+            tile.textContent = item.emoji;
+            tile.dataset.id = item.id;
+            tile.onclick = () => selectTile(tile, 'emoji');
+            eCol.appendChild(tile);
+        });
+    }
+
+    function selectTile(tile, type) {
+        if (tile.classList.contains('correct')) return;
+
+        if (type === 'word') {
+            if (selectedWord) selectedWord.classList.remove('selected');
+            selectedWord = tile;
+        } else {
+            if (selectedEmoji) selectedEmoji.classList.remove('selected');
+            selectedEmoji = tile;
+        }
+        tile.classList.add('selected');
+
+        if (selectedWord && selectedEmoji) {
+            checkMatch();
+        }
+    }
+
+    function checkMatch() {
+        const id1 = selectedWord.dataset.id;
+        const id2 = selectedEmoji.dataset.id;
+
+        if (id1 === id2) {
+            // Erfolg
+            const color = pairColors[id1];
+            markCorrect(selectedWord, selectedEmoji, color);
+            selectedWord = null;
+            selectedEmoji = null;
+            foundCount++;
+            if (foundCount === vocabulary.length) {
+                document.getElementById('feedback').textContent = "🎉 Super! Alle Paare gefunden.";
+            }
+        } else {
+            // Fehler
+            selectedWord.classList.add('wrong');
+            selectedEmoji.classList.add('wrong');
+            const w = selectedWord;
+            const e = selectedEmoji;
+            setTimeout(() => {
+                w.classList.remove('wrong', 'selected');
+                e.classList.remove('wrong', 'selected');
+            }, 500);
+            selectedWord = null;
+            selectedEmoji = null;
+        }
+    }
+
+    function markCorrect(tile1, tile2, color) {
+        tile1.classList.add('correct');
+        tile2.classList.add('correct');
+        tile1.classList.remove('selected');
+        tile2.classList.remove('selected');
+        tile1.style.backgroundColor = color;
+        tile2.style.backgroundColor = color;
+    }
+
+    document.getElementById('solution-btn').onclick = () => {
+        const allTiles = document.querySelectorAll('.tile');
+        allTiles.forEach(tile => {
+            const id = tile.dataset.id;
+            tile.classList.add('correct');
+            tile.style.backgroundColor = pairColors[id];
+        });
+        document.getElementById('feedback').textContent = "Lösung wird angezeigt.";
+    };
+
+    document.getElementById('reset-btn').onclick = init;
+
+    init();
+</script>
+
+</body>
+</html>
