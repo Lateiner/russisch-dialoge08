@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russisch-Lernspiel: Wer sagt was? (Schuhe)</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --seller-color: #3498db;
+            --buyer-color: #9b59b6;
+            --success-bg: #e8f5e9;
+            --error-bg: #ffebee;
+            --text-main: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 15px;
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .instruction {
+            text-align: center;
+            font-size: 0.95rem;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        /* Bereich für die unsortierten Sätze */
+        #item-pool {
+            background: #f1f1f1;
+            padding: 15px;
+            border-radius: 10px;
+            min-height: 80px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 30px;
+            border: 2px dashed #ccc;
+        }
+
+        .bubble {
+            padding: 10px 15px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            user-select: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .bubble.selected {
+            border-color: #f1c40f;
+            background-color: #fff9c4;
+            transform: scale(1.05);
+        }
+
+        /* Spalten-Layout */
+        .columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .column {
+            background: #fafafa;
+            border: 2px solid #eee;
+            border-radius: 12px;
+            min-height: 250px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: background 0.3s;
+        }
+
+        .column.highlight {
+            background: #eef2f7;
+            border-color: var(--seller-color);
+        }
+
+        .column h2 {
+            text-align: center;
+            font-size: 1.1rem;
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .seller-h { color: var(--seller-color); }
+        .buyer-h { color: var(--buyer-color); }
+
+        /* Sätze in den Spalten */
+        .correct-item {
+            background-color: var(--success-bg);
+            border: 1px solid #c8e6c9;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            animation: fadeIn 0.4s;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } }
+
+        .wrong-flash {
+            background-color: var(--error-bg) !important;
+            border-color: #ffcdd2 !important;
+        }
+
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: opacity 0.2s;
+        }
+
+        #solution-btn { background: var(--primary-color); color: white; }
+        #reset-btn { background: #e0e0e0; color: #333; }
+
+        @media (max-width: 650px) {
+            .columns { grid-template-columns: 1fr; }
+            .column { min-height: 150px; }
+            h1 { font-size: 1.3rem; }
+            button { flex: 1; padding: 12px 10px; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Wer sagt was? (Schuhe kaufen)</h1>
+    <p class="instruction">Klicke einen Satz an und wähle dann die richtige Rolle aus.</p>
+
+    <div id="item-pool">
+        <!-- Sätze erscheinen hier -->
+    </div>
+
+    <div class="columns">
+        <div class="column" id="col-seller" onclick="assignTo('seller')">
+            <h2 class="seller-h">Продавец (Verkäufer)</h2>
+            <div id="list-seller" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+        <div class="column" id="col-buyer" onclick="assignTo('buyer')">
+            <h2 class="buyer-h">Покупательница (Käuferin)</h2>
+            <div id="list-buyer" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="solution-btn" onclick="showSolution()">Lösung anzeigen</button>
+        <button id="reset-btn" onclick="init()">Neustart</button>
+    </div>
+</div>
+
+<script>
+    const dialogItems = [
+        { text: "Здравствуйте! Что вы ищете?", role: "seller" },
+        { text: "Здравствуйте! Я ищу коричневые сапоги.", role: "buyer" },
+        { text: "Какой у вас размер?", role: "seller" },
+        { text: "У меня тридцать восьмой размер.", role: "buyer" },
+        { text: "Посмотрите эти. Вам они нравятся?", role: "seller" },
+        { text: "Да, я примерю их.", role: "buyer" },
+        { text: "Вам подошли сапоги?", role: "seller" },
+        { text: "Эти мне немного мало. Можете принести на размер больше?", role: "buyer" },
+        { text: "Да, конечно. Вот, пожалуйста.", role: "seller" },
+        { text: "Эти подходят. Я возьму эти сапоги.", role: "buyer" },
+        { text: "Будете платить картой или наличными?", role: "seller" },
+        { text: "Картой, пожалуйста.", role: "buyer" },
+        { text: "Вот ваш чек. Спасибо за покупку!", role: "seller" }
+    ];
+
+    let selectedIdx = null;
+    let poolIndices = [];
+
+    function init() {
+        selectedIdx = null;
+        poolIndices = dialogItems.map((_, i) => i);
+        shuffle(poolIndices);
+        
+        document.getElementById('list-seller').innerHTML = '';
+        document.getElementById('list-buyer').innerHTML = '';
+        renderPool();
+        highlightColumns(false);
+    }
+
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    function renderPool() {
+        const pool = document.getElementById('item-pool');
+        pool.innerHTML = '';
+        
+        poolIndices.forEach(idx => {
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            if (selectedIdx === idx) bubble.classList.add('selected');
+            bubble.textContent = dialogItems[idx].text;
+            
+            bubble.onclick = (e) => {
+                e.stopPropagation(); 
+                selectedIdx = idx;
+                renderPool();
+                highlightColumns(true);
+            };
+            pool.appendChild(bubble);
+        });
+        
+        if (poolIndices.length === 0 && document.getElementById('list-seller').children.length > 0) {
+            pool.innerHTML = '<span style="color:green; font-weight:bold;">Gut gemacht! Alles sortiert.</span>';
+        }
+    }
+
+    function highlightColumns(show) {
+        document.getElementById('col-seller').classList.toggle('highlight', show);
+        document.getElementById('col-buyer').classList.toggle('highlight', show);
+    }
+
+    function assignTo(role) {
+        if (selectedIdx === null) return;
+
+        const item = dialogItems[selectedIdx];
+        const bubble = document.querySelector('.bubble.selected');
+
+        if (item.role === role) {
+            // Richtig
+            const div = document.createElement('div');
+            div.className = 'correct-item';
+            div.textContent = item.text;
+            document.getElementById('list-' + role).appendChild(div);
+
+            poolIndices = poolIndices.filter(i => i !== selectedIdx);
+            selectedIdx = null;
+            highlightColumns(false);
+            renderPool();
+        } else {
+            // Falsch
+            bubble.classList.add('wrong-flash');
+            setTimeout(() => {
+                bubble.classList.remove('wrong-flash');
+            }, 500);
+        }
+    }
+
+    function showSolution() {
+        // Alles leeren
+        document.getElementById('list-seller').innerHTML = '';
+        document.getElementById('list-buyer').innerHTML = '';
+        
+        // Alle Items einsortieren
+        dialogItems.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'correct-item';
+            div.textContent = item.text;
+            document.getElementById('list-' + item.role).appendChild(div);
+        });
+
+        // Pool leeren
+        poolIndices = [];
+        selectedIdx = null;
+        renderPool();
+        highlightColumns(false);
+    }
+
+    // Start
+    init();
+</script>
+
+</body>
+</html>
